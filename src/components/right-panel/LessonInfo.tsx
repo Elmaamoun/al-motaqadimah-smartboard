@@ -189,13 +189,13 @@ export const LessonInfo: React.FC = () => {
             </div>
 
             {/* Learning Outcomes - Fixed layout */}
-            <div className="space-y-2 flex-1 overflow-hidden flex flex-col">
+            <div className="space-y-2 flex flex-col">
                 <label className="flex items-center gap-2 text-slate-800 font-bold text-base mb-2 shrink-0">
                     <Target className="text-primary-blue" size={20} />
                     نواتج التعلم
                 </label>
 
-                <div className="space-y-3 overflow-y-auto pr-1">
+                <div className="space-y-3 pr-1">
                     {outcomes.map((outcome, index) => (
                         <div key={index} className="flex flex-col gap-2 p-1 border border-transparent hover:border-gray-200 rounded-lg transition-colors max-w-full overflow-hidden">
                             <div className="flex items-center gap-2">

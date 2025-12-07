@@ -12,7 +12,7 @@ const AppContent: React.FC = () => {
 function App() {
   return (
     <AppProvider>
-      <div className="h-screen w-screen bg-gray-100 overflow-hidden font-cairo" dir="rtl">
+      <div className="min-h-screen w-screen bg-gray-100 overflow-y-auto font-cairo" dir="rtl">
         <AppContent />
       </div>
     </AppProvider>

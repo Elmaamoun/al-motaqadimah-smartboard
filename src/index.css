@@ -74,4 +74,45 @@
     scrollbar-width: thin;
     scrollbar-color: #CBD5E1 transparent;
   }
+
+  /* Base layout – large smartboard screens (default) */
+  .smartboard-left {
+    flex-basis: 260px;
+  }
+
+  .smartboard-right {
+    flex-basis: 380px;
+  }
+
+  .smartboard-center {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* Laptop / mid screens: width < 1440px */
+  @media (max-width: 1440px) {
+    .smartboard-left {
+      flex-basis: 230px;
+    }
+
+    .smartboard-right {
+      flex-basis: 300px;
+      /* smaller lesson panel */
+    }
+
+    .smartboard-center {
+      flex: 1 1 auto;
+    }
+  }
+
+  /* Smaller screens: width < 1200px */
+  @media (max-width: 1200px) {
+    .smartboard-left {
+      flex-basis: 220px;
+    }
+
+    .smartboard-right {
+      flex-basis: 280px;
+    }
+  }
 }

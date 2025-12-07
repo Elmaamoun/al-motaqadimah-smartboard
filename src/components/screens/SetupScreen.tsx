@@ -54,8 +54,8 @@ export const SetupScreen: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6">
-            <div className="bg-white w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px]">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6 sm:p-4 overflow-y-auto">
+            <div className="bg-white w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px] max-h-[calc(100vh-40px)] overflow-y-auto">
 
                 {/* Branding Side */}
                 <div className="bg-primary-blue text-white p-10 md:w-1/3 flex flex-col items-center justify-center text-center relative overflow-hidden">

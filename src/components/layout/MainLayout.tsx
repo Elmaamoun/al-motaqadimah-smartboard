@@ -11,9 +11,9 @@ export const MainLayout: React.FC = () => {
         <div className="h-screen w-screen bg-gray-50 overflow-hidden flex flex-col">
             <TopBar />
 
-            <PanelGroup direction="horizontal" className="flex-1">
+            <PanelGroup direction="horizontal" className="flex-1 overflow-hidden">
                 {/* First Panel (Visually Right in RTL) -> Should be Lesson Info / Whiteboard */}
-                <Panel defaultSize={22} minSize={20} maxSize={40} className="border-l border-gray-200">
+                <Panel defaultSize={22} minSize={20} maxSize={40} className="border-l border-gray-200 smartboard-right overflow-y-auto">
                     <RightPanel />
                 </Panel>
 
@@ -22,7 +22,7 @@ export const MainLayout: React.FC = () => {
                 </PanelResizeHandle>
 
                 {/* Center Panel: PDF Viewer */}
-                <Panel defaultSize={50} minSize={30}>
+                <Panel defaultSize={50} minSize={30} className="smartboard-center overflow-y-auto">
                     <CenterPanel />
                 </Panel>
 
@@ -31,7 +31,7 @@ export const MainLayout: React.FC = () => {
                 </PanelResizeHandle>
 
                 {/* Last Panel (Visually Left in RTL) -> Should be Subjects & Participation */}
-                <Panel defaultSize={20} minSize={15} maxSize={30} className="border-r border-gray-200">
+                <Panel defaultSize={20} minSize={15} maxSize={30} className="border-r border-gray-200 smartboard-left overflow-y-auto">
                     <LeftPanel />
                 </Panel>
             </PanelGroup>

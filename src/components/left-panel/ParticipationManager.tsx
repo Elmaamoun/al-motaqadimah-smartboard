@@ -111,44 +111,42 @@ export const ParticipationManager: React.FC = () => {
 
 
 
-            {/* Tabs */}
-            <div className="flex p-1 bg-gray-200 rounded-lg mb-4 shrink-0">
-                <button
-                    onClick={() => setActiveTab('individual')}
-                    className={clsx(
-                        "flex-1 py-2 rounded-md font-bold text-lg transition-all",
-                        activeTab === 'individual' ? "bg-white text-primary-blue shadow-sm" : "text-gray-600 hover:bg-gray-300"
-                    )}
-                >
-                    مشاركات فردية
-                </button>
-                <button
-                    onClick={() => setActiveTab('group')}
-                    className={clsx(
-                        "flex-1 py-2 rounded-md font-bold text-lg transition-all",
-                        activeTab === 'group' ? "bg-white text-primary-blue shadow-sm" : "text-gray-600 hover:bg-gray-300"
-                    )}
-                >
-                    مشاركات جماعية
-                </button>
-            </div>
+            {/* Sticky Header Section */}
+            <div className="sticky top-0 bg-white z-10 pb-4">
+                {/* Tabs */}
+                <div className="flex p-1 bg-gray-200 rounded-lg mb-4">
+                    <button
+                        onClick={() => setActiveTab('individual')}
+                        className={clsx(
+                            "flex-1 py-2 rounded-md font-bold text-lg transition-all",
+                            activeTab === 'individual' ? "bg-white text-primary-blue shadow-sm" : "text-gray-600 hover:bg-gray-300"
+                        )}
+                    >
+                        مشاركات فردية
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('group')}
+                        className={clsx(
+                            "flex-1 py-2 rounded-md font-bold text-lg transition-all",
+                            activeTab === 'group' ? "bg-white text-primary-blue shadow-sm" : "text-gray-600 hover:bg-gray-300"
+                        )}
+                    >
+                        مشاركات جماعية
+                    </button>
+                </div>
 
-            {/* Content Area */}
-            <div className="flex-1 overflow-y-auto pr-1">
-
-                {/* Individual Tab */}
+                {/* Fixed Top Controls for Individual Tab */}
                 {activeTab === 'individual' && (
                     <div className="space-y-4">
-                        {/* Add from Class List Button */}
                         <button
                             onClick={() => setShowClassListModal(true)}
-                            className="w-full bg-blue-50 text-primary-blue border-2 border-dashed border-blue-200 rounded-xl p-3 flex items-center justify-center gap-2 font-bold hover:bg-blue-100 transition-colors mb-2"
+                            className="w-full bg-blue-50 text-primary-blue border-2 border-dashed border-blue-200 rounded-xl p-3 flex items-center justify-center gap-2 font-bold hover:bg-blue-100 transition-colors"
                         >
                             <Users size={20} />
                             إضافة طالب من قائمة الفصل
                         </button>
 
-                        <form onSubmit={handleAddStudent} className="flex gap-2 mb-4">
+                        <form onSubmit={handleAddStudent} className="flex gap-2">
                             <input
                                 type="text"
                                 value={newStudentName}
@@ -164,45 +162,52 @@ export const ParticipationManager: React.FC = () => {
                                 <UserPlus size={24} />
                             </button>
                         </form>
+                    </div>
+                )}
+            </div>
 
-                        <div className="space-y-3">
-                            {students.length === 0 && (
-                                <p className="text-center text-gray-400 py-8">لا يوجد طلاب مضافين</p>
-                            )}
-                            {students.map((student) => (
-                                <div
-                                    key={student.id}
-                                    className={clsx(
-                                        "flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-100 transition-all duration-300",
-                                        animatingId === student.id && animationType === 'positive' && "scale-105 bg-green-50 border-green-200 shadow-md",
-                                        animatingId === student.id && animationType === 'negative' && "shake bg-red-50 border-red-200"
-                                    )}
-                                >
-                                    <span className="font-bold text-gray-800 truncate ml-2 text-lg">{student.name}</span>
-                                    <div className="flex items-center gap-3">
-                                        <button
-                                            onClick={() => handlePointUpdate(student.id, 5, false)}
-                                            className="w-10 h-10 flex items-center justify-center bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
-                                        >
-                                            <Plus size={20} />
-                                        </button>
-                                        <span className="min-w-[60px] text-center font-black text-xl text-gray-800">
-                                            {student.points}
-                                        </span>
-                                        <button
-                                            onClick={() => handlePointUpdate(student.id, -5, false)}
-                                            className="w-10 h-10 flex items-center justify-center bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
-                                        >
-                                            <Minus size={20} />
-                                        </button>
-                                    </div>
+            {/* Scrollable Content Area */}
+            <div className="flex-1 overflow-y-auto pr-1 pb-2">
+
+                {/* Individual Tab Content (List Only) */}
+                {activeTab === 'individual' && (
+                    <div className="space-y-3">
+                        {students.length === 0 && (
+                            <p className="text-center text-gray-400 py-8">لا يوجد طلاب مضافين</p>
+                        )}
+                        {students.map((student) => (
+                            <div
+                                key={student.id}
+                                className={clsx(
+                                    "flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-100 transition-all duration-300",
+                                    animatingId === student.id && animationType === 'positive' && "scale-105 bg-green-50 border-green-200 shadow-md",
+                                    animatingId === student.id && animationType === 'negative' && "shake bg-red-50 border-red-200"
+                                )}
+                            >
+                                <span className="font-bold text-gray-800 truncate ml-2 text-lg">{student.name}</span>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => handlePointUpdate(student.id, 5, false)}
+                                        className="w-10 h-10 flex items-center justify-center bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
+                                    >
+                                        <Plus size={20} />
+                                    </button>
+                                    <span className="min-w-[60px] text-center font-black text-xl text-gray-800">
+                                        {student.points}
+                                    </span>
+                                    <button
+                                        onClick={() => handlePointUpdate(student.id, -5, false)}
+                                        className="w-10 h-10 flex items-center justify-center bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                                    >
+                                        <Minus size={20} />
+                                    </button>
                                 </div>
-                            ))}
-                        </div>
+                            </div>
+                        ))}
                     </div>
                 )}
 
-                {/* Group Tab */}
+                {/* Group Tab Content */}
                 {activeTab === 'group' && (
                     <div className="space-y-4">
                         {groups.map((group) => (
