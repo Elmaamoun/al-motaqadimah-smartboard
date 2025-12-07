@@ -1,0 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Cairo', sans-serif;
+    direction: rtl;
+    @apply text-gray-900;
+  }
+
+  body {
+    @apply bg-brand-gray text-lg font-semibold;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    @apply font-medium;
+  }
+
+  /* Custom Scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #E2E8F0;
+    border-radius: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #2B899D;
+    border-radius: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #1F6472;
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #2B899D #E2E8F0;
+  }
+
+  /* Slim Neutral Scrollbar for PDF Viewer */
+  .scrollbar-slim-neutral::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-slim-neutral::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-slim-neutral::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    /* slate-300 */
+    border-radius: 3px;
+  }
+
+  .scrollbar-slim-neutral::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
+    /* slate-400 */
+  }
+
+  /* Firefox */
+  .scrollbar-slim-neutral {
+    scrollbar-width: thin;
+    scrollbar-color: #CBD5E1 transparent;
+  }
+}
