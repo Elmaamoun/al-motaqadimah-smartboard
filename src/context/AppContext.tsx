@@ -83,7 +83,9 @@ interface AppContextType {
 
     // Class Roster State
     classStudents: string[];
-    loadClassStudents: (stage: string, grade: string, className: string) => void;
+    loadClassStudents: (stage: string, grade: string, className: string, system: string) => boolean;
+    updateStudentName: (id: string, name: string) => void;
+    deleteStudent: (id: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -124,7 +126,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const toggleSound = () => setIsSoundEnabled(prev => !prev);
 
-    const loadClassStudents = (stage: string, grade: string, className: string) => {
+    const loadClassStudents = (stage: string, grade: string, className: string, system: string): boolean => {
         // Map grade string to number (e.g., "الصف الأول" -> 1)
         const gradeMap: Record<string, number> = {
             "الصف الأول": 1,
@@ -136,6 +138,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         };
 
         const gradeNum = gradeMap[grade];
+        const classNum = parseInt(className);
 
         // Find matching class
         const foundClass = studentsData.find(c => {
@@ -145,21 +148,47 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             // Check grade
             if (c.grade !== gradeNum) return false;
 
-            // Check class (handle string vs number)
-            // If className is "1", "2", etc., it might match a number in JSON
-            // If className is "تحفيظ 1", it matches a string in JSON
-            const classNum = parseInt(className);
-            if (!isNaN(classNum)) {
-                return c.class === classNum;
+            // Check class based on system
+            if (system === 'تحفيظ') {
+                // Try to match "تحفيظ X"
+                if (typeof c.class === 'string' && c.class.includes('تحفيظ')) {
+                    // Normalize spaces and checking
+                    const targetName = `تحفيظ ${className}`;
+                    if (c.class === targetName) return true;
+                    // Catch-all for "تحفيظ" without number if className is 1 (simplistic fallback, strict better?)
+                    // Strict requirement: "Verify selecting "عام" does NOT show "تحفيظ" rosters and vice versa."
+                    // checking strict equality first.
+                    if (c.class === 'تحفيظ' && className === '1') return true;
+                    return false;
+                }
+                return false;
             } else {
-                return c.class === className;
+                // System "عام" - Expect numeric class or string equal to number
+                // Ensure we don't pick up "تحفيظ" classes
+                if (typeof c.class === 'string' && c.class.includes('تحفيظ')) return false;
+
+                if (!isNaN(classNum)) {
+                    return c.class === classNum;
+                } else {
+                    return c.class === className;
+                }
             }
         });
 
         if (foundClass) {
             setClassStudents(foundClass.students);
+            // Auto-populate students for participation
+            const initialStudents: Student[] = foundClass.students.map(name => ({
+                id: Math.random().toString(36).substr(2, 9),
+                name: name,
+                points: 0
+            }));
+            setStudents(initialStudents);
+            return true;
         } else {
             setClassStudents([]);
+            setStudents([]);
+            return false;
         }
     };
 
@@ -221,6 +250,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     };
 
+    const updateStudentName = (id: string, name: string) => {
+        setStudents(prev => prev.map(s => s.id === id ? { ...s, name } : s));
+    };
+
+    const deleteStudent = (id: string) => {
+        setStudents(prev => prev.filter(s => s.id !== id));
+    };
+
     return (
         <AppContext.Provider value={{
             selectedSubject,
@@ -248,6 +285,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             toggleSound,
             classStudents,
             loadClassStudents,
+            updateStudentName,
+            deleteStudent
         }}>
             {children}
         </AppContext.Provider>

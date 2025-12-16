@@ -17,7 +17,6 @@ interface Stroke {
 }
 
 const COLORS = ['#000000', '#EF4444', '#22C55E', '#3B82F6'];
-const SIZES = [4, 8, 12];
 
 export const Whiteboard: React.FC = () => {
     const [pages, setPages] = useState<{ strokes: Stroke[], redoStack: Stroke[] }[]>([
@@ -26,7 +25,7 @@ export const Whiteboard: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(0);
     const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
     const [color, setColor] = useState('#000000');
-    const [size, setSize] = useState(4);
+    const [size] = useState(4);
     const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
 
     const svgRef = useRef<SVGSVGElement>(null);

@@ -210,6 +210,20 @@ export const PDFViewer: React.FC = () => {
         );
     };
 
+    const fileUrl = React.useMemo(() => {
+        if (!pdfFile) return null;
+        return URL.createObjectURL(pdfFile);
+    }, [pdfFile]);
+
+    const fileType = React.useMemo(() => {
+        if (!pdfFile) return 'none';
+        const name = pdfFile.name.toLowerCase();
+        if (name.endsWith('.pdf')) return 'pdf';
+        if (name.match(/\.(png|jpg|jpeg|webp)$/)) return 'image';
+        if (name.match(/\.(mp4|webm)$/)) return 'video';
+        return 'unknown';
+    }, [pdfFile]);
+
     return (
         <div className="h-full flex flex-col bg-gray-100">
             {/* Toolbar */}
@@ -218,11 +232,11 @@ export const PDFViewer: React.FC = () => {
                     <label className="flex items-center gap-2 px-4 py-2 bg-primary-blue text-white rounded-lg cursor-pointer hover:bg-opacity-90 transition-colors font-bold">
                         <Upload size={20} />
                         <span>فتح ملف</span>
-                        <input type="file" onChange={onFileChange} accept=".pdf,.docx,.pptx" className="hidden" />
+                        <input type="file" onChange={onFileChange} accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp,.mp4,.webm" className="hidden" />
                     </label>
                 </div>
 
-                {pdfFile && (
+                {fileType === 'pdf' && (
                     <>
                         {/* Annotation Tools */}
                         <div className="flex items-center gap-2 bg-gray-50 px-2 py-1 rounded-lg border border-gray-200 mx-2">
@@ -329,7 +343,7 @@ export const PDFViewer: React.FC = () => {
             </div>
 
             {/* Page Slider */}
-            {pdfFile && (
+            {fileType === 'pdf' && (
                 <div className="bg-white px-4 py-1 border-b border-gray-200">
                     <input
                         type="range"
@@ -358,55 +372,70 @@ export const PDFViewer: React.FC = () => {
                 {!pdfFile ? (
                     <div className="flex flex-col items-center justify-center text-gray-400 m-auto">
                         <Upload size={64} className="mb-4 opacity-50" />
-                        <p className="text-xl font-medium">الرجاء اختيار ملف PDF للعرض</p>
+                        <p className="text-xl font-medium">الرجاء اختيار ملف للعرض</p>
                     </div>
                 ) : (
-                    !pdfFile.name.toLowerCase().endsWith('.pdf') ? (
-                        <div className="flex flex-col items-center justify-center text-gray-400 m-auto p-8 text-center">
-                            <FileText size={64} className="mb-4 opacity-50" />
-                            <p className="text-xl font-medium mb-2">نوع الملف غير مدعوم للمعاينة المباشرة</p>
-                            <p className="text-sm opacity-70">({pdfFile.name})</p>
-                            <p className="mt-4 text-sm bg-yellow-50 text-yellow-700 px-4 py-2 rounded-lg border border-yellow-200">
-                                يدعم النظام حالياً عرض ملفات PDF فقط.
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="relative shadow-2xl m-auto p-8">
-                            <Document
-                                file={pdfFile}
-                                onLoadSuccess={onDocumentLoadSuccess}
-                            >
-                                <Page
-                                    pageNumber={pageNumber}
-                                    scale={scale}
-                                    renderTextLayer={false}
-                                    renderAnnotationLayer={false}
-                                    className="bg-white"
-                                />
-                            </Document>
+                    <>
+                        {fileType === 'unknown' && (
+                            <div className="flex flex-col items-center justify-center text-gray-400 m-auto p-8 text-center">
+                                <FileText size={64} className="mb-4 opacity-50" />
+                                <p className="text-xl font-medium mb-2">نوع الملف غير مدعوم للمعاينة المباشرة</p>
+                                <p className="text-sm opacity-70">({pdfFile.name})</p>
+                                <p className="mt-4 text-sm bg-yellow-50 text-yellow-700 px-4 py-2 rounded-lg border border-yellow-200">
+                                    يدعم النظام حالياً عرض ملفات PDF والصور والفيديو فقط.
+                                </p>
+                            </div>
+                        )}
 
-                            {/* Annotation Overlay */}
-                            <svg
-                                ref={svgRef}
-                                className="absolute inset-0 w-full h-full touch-none z-10 pointer-events-auto"
-                                style={{ pointerEvents: isAnnotationMode ? 'auto' : 'none', top: 32, left: 32, right: 32, bottom: 32 }}
-                                onPointerDown={handlePointerDown}
-                                onPointerMove={handlePointerMove}
-                                onPointerUp={handlePointerUp}
-                                onPointerLeave={handlePointerUp}
-                                viewBox={`0 0 ${svgRef.current?.clientWidth || 0} ${svgRef.current?.clientHeight || 0}`}
-                            >
-                                <g transform={`scale(${scale})`}>
-                                    {(annotations[pageNumber] || []).map((stroke, i) => (
-                                        <g key={i}>{renderStroke(stroke)}</g>
-                                    ))}
-                                    {currentStroke && !currentStroke.isEraser && (
-                                        <g>{renderStroke(currentStroke)}</g>
-                                    )}
-                                </g>
-                            </svg>
-                        </div>
-                    )
+                        {fileType === 'image' && fileUrl && (
+                            <div className="w-full h-full flex items-center justify-center p-4">
+                                <img src={fileUrl} alt="Content" className="max-w-full max-h-full object-contain shadow-lg rounded-lg" />
+                            </div>
+                        )}
+
+                        {fileType === 'video' && fileUrl && (
+                            <div className="w-full h-full flex items-center justify-center p-4 bg-black">
+                                <video src={fileUrl} controls className="max-w-full max-h-full outline-none rounded-lg" />
+                            </div>
+                        )}
+
+                        {fileType === 'pdf' && (
+                            <div className="relative shadow-2xl m-auto p-8">
+                                <Document
+                                    file={pdfFile}
+                                    onLoadSuccess={onDocumentLoadSuccess}
+                                >
+                                    <Page
+                                        pageNumber={pageNumber}
+                                        scale={scale}
+                                        renderTextLayer={false}
+                                        renderAnnotationLayer={false}
+                                        className="bg-white"
+                                    />
+                                </Document>
+                                {/* Annotation Overlay */}
+                                <svg
+                                    ref={svgRef}
+                                    className="absolute inset-0 w-full h-full touch-none z-10 pointer-events-auto"
+                                    style={{ pointerEvents: isAnnotationMode ? 'auto' : 'none', top: 32, left: 32, right: 32, bottom: 32 }}
+                                    onPointerDown={handlePointerDown}
+                                    onPointerMove={handlePointerMove}
+                                    onPointerUp={handlePointerUp}
+                                    onPointerLeave={handlePointerUp}
+                                    viewBox={`0 0 ${svgRef.current?.clientWidth || 0} ${svgRef.current?.clientHeight || 0}`}
+                                >
+                                    <g transform={`scale(${scale})`}>
+                                        {(annotations[pageNumber] || []).map((stroke, i) => (
+                                            <g key={i}>{renderStroke(stroke)}</g>
+                                        ))}
+                                        {currentStroke && !currentStroke.isEraser && (
+                                            <g>{renderStroke(currentStroke)}</g>
+                                        )}
+                                    </g>
+                                </svg>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </div>

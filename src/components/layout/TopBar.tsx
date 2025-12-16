@@ -23,6 +23,9 @@ export const TopBar: React.FC = () => {
     // Audio Refs
     const alertSoundRef = useRef<HTMLAudioElement | null>(null);
     const alarmSoundRef = useRef<HTMLAudioElement | null>(null);
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const hasPlayedFiveMinAlert = useRef(false);
+
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -44,6 +47,64 @@ export const TopBar: React.FC = () => {
             alertSoundRef.current = new Audio('/sounds/alert.mp3');
             alarmSoundRef.current = new Audio('/sounds/alarm.mp3');
         }
+
+        // Initialize Web Audio Context for Beep
+        if (!audioContextRef.current) {
+            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+            if (AudioContextClass) {
+                audioContextRef.current = new AudioContextClass();
+            }
+        }
+
+        if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+            audioContextRef.current.resume().catch(e => console.error("Audio resume failed", e));
+        }
+    };
+
+    const playBeep = () => {
+        try {
+            if (!audioContextRef.current) initAudio();
+            const ctx = audioContextRef.current;
+            if (!ctx) return;
+            if (ctx.state === 'suspended') ctx.resume();
+
+            const t = ctx.currentTime;
+
+            // Oscillator 1: Fundamental (Sine) - Main Chime
+            const osc1 = ctx.createOscillator();
+            const gain1 = ctx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(880, t); // A5
+
+            osc1.connect(gain1);
+            gain1.connect(ctx.destination);
+
+            gain1.gain.setValueAtTime(0, t);
+            gain1.gain.linearRampToValueAtTime(0.5, t + 0.05); // Fast attack
+            gain1.gain.exponentialRampToValueAtTime(0.01, t + 2.5); // Long Decay
+
+            osc1.start(t);
+            osc1.stop(t + 2.5);
+
+            // Oscillator 2: Harmonic (Triangle) - Richness
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+            osc2.type = 'triangle';
+            osc2.frequency.setValueAtTime(1760, t); // A6
+
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+
+            gain2.gain.setValueAtTime(0, t);
+            gain2.gain.linearRampToValueAtTime(0.1, t + 0.05);
+            gain2.gain.exponentialRampToValueAtTime(0.001, t + 2.0);
+
+            osc2.start(t);
+            osc2.stop(t + 2.5);
+
+        } catch (e) {
+            console.error("Beep failed", e);
+        }
     };
 
     // Timer Ticker Effect
@@ -64,16 +125,20 @@ export const TopBar: React.FC = () => {
             setShowTimeUpBanner(true);
             if (isSoundEnabled) alarmSoundRef.current?.play().catch(() => { });
         } else if (remainingSeconds === 300 && isRunning) { // 5 mins
-            if (isSoundEnabled) alertSoundRef.current?.play().catch(() => { });
+            if (isSoundEnabled && !hasPlayedFiveMinAlert.current) {
+                playBeep();
+                hasPlayedFiveMinAlert.current = true;
+            }
         } else if (remainingSeconds === 120 && isRunning) { // 2 mins
             if (isSoundEnabled) alarmSoundRef.current?.play().catch(() => { });
         }
     }, [remainingSeconds, isRunning, isSoundEnabled]);
 
     const startTimer = () => {
-        initAudio();
+        initAudio(); // Safe to call multiple times
         if (remainingSeconds > 0) {
             setIsRunning(true);
+            setShowTimerSettings(false); // Close popup on Start
         }
     };
 
@@ -85,6 +150,7 @@ export const TopBar: React.FC = () => {
         setIsRunning(false);
         setRemainingSeconds(initialSeconds);
         setShowTimeUpBanner(false);
+        hasPlayedFiveMinAlert.current = false;
     };
 
     const toggleFullscreen = async () => {
@@ -110,8 +176,9 @@ export const TopBar: React.FC = () => {
         setInitialSeconds(seconds);
         setRemainingSeconds(seconds);
         setIsRunning(false);
-        setShowTimerSettings(false);
         setShowTimeUpBanner(false);
+        hasPlayedFiveMinAlert.current = false;
+        // Should NOT close popup
     };
 
     const handleCustomTimerSubmit = (e: React.FormEvent) => {

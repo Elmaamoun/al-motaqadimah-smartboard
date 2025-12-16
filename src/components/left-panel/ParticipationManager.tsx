@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Plus, Minus, UserPlus, Users, X, Search, Trash2, Crown, Edit2 } from 'lucide-react';
+import { Plus, Minus, X, Trash2, Crown, Edit2, Check } from 'lucide-react';
 import clsx from 'clsx';
 import ReactConfetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
@@ -9,55 +9,111 @@ const POSITIVE_MESSAGES = ["أحسنت!", "رائع جداً!", "ممتاز!", "
 const NEUTRAL_MESSAGES = ["نذكّرك بالالتزام.", "يمكنك التحسن في المشاركة القادمة.", "سنرى منك الأفضل قريباً."];
 
 export const ParticipationManager: React.FC = () => {
-    const { students, addStudent, updateStudentPoints, groups, updateGroupPoints, isSoundEnabled, classStudents, updateGroupName, updateGroupLeader, deleteGroup } = useApp();
-    const [newStudentName, setNewStudentName] = useState('');
-    const [showClassListModal, setShowClassListModal] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [animatingId, setAnimatingId] = useState<string | null>(null);
-    const [animationType, setAnimationType] = useState<'positive' | 'negative' | null>(null);
-    const [overlayMessage, setOverlayMessage] = useState<{ text: string, type: 'positive' | 'negative' } | null>(null);
-
+    const { students, updateStudentPoints, groups, updateGroupPoints, isSoundEnabled, classStudents, updateGroupName, updateGroupLeader, deleteGroup, updateStudentName, deleteStudent } = useApp();
     const [activeTab, setActiveTab] = useState<'individual' | 'group'>('individual');
     const { width, height } = useWindowSize();
+
+    // Animation State
+    // Animation State
+    const [animatingId, setAnimatingId] = useState<string | null>(null);
+    const [animationType, setAnimationType] = useState<'positive' | 'negative' | null>(null);
+    const [messageQueue, setMessageQueue] = useState<Array<{ id: number, text: string, type: 'positive' | 'negative' }>>([]);
+    const [currentMessage, setCurrentMessage] = useState<{ id: number, text: string, type: 'positive' | 'negative' } | null>(null);
+    const [animationKeys, setAnimationKeys] = useState<Record<string, number>>({});
+    const animationTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+    // Process Message Queue
+    // Process Message Queue
+    React.useEffect(() => {
+        if (!currentMessage && messageQueue.length > 0) {
+            const nextMsg = messageQueue[0];
+            setCurrentMessage(nextMsg);
+            setMessageQueue(prev => prev.slice(1));
+        }
+    }, [messageQueue, currentMessage]);
+
+    // Handle Message Timer (Independent of Queue)
+    React.useEffect(() => {
+        if (currentMessage) {
+            const timer = setTimeout(() => {
+                setCurrentMessage(null);
+            }, 3000); // 3s duration per message
+            return () => clearTimeout(timer);
+        }
+    }, [currentMessage]);
+
+    // Student Edit State
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editName, setEditName] = useState('');
 
     // Group Leader Modal State
     const [leaderModalOpen, setLeaderModalOpen] = useState(false);
     const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
-    // Audio Refs
-    const positiveSoundRef = useRef<HTMLAudioElement | null>(null);
-    const neutralSoundRef = useRef<HTMLAudioElement | null>(null);
-    useEffect(() => {
-        positiveSoundRef.current = new Audio('/sounds/positive.mp3');
-        neutralSoundRef.current = new Audio('/sounds/neutral.mp3');
-    }, []);
+    // Audio Context Ref
+    const audioContextRef = useRef<AudioContext | null>(null);
 
-    const handleAddStudent = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (newStudentName.trim()) {
-            // Check for duplicate
-            if (students.some(s => s.name === newStudentName.trim())) {
-                alert("هذا الطالب مضاف بالفعل.");
-                return;
+    const playTone = (type: 'positive' | 'negative') => {
+        try {
+            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+            if (!AudioContextClass) return;
+
+            if (!audioContextRef.current) {
+                audioContextRef.current = new AudioContextClass();
             }
-            addStudent(newStudentName.trim());
-            setNewStudentName('');
+
+            const ctx = audioContextRef.current;
+            if (ctx.state === 'suspended') ctx.resume();
+
+            const startTime = ctx.currentTime;
+
+            if (type === 'positive') {
+                // Celebration Chord: C5, E5, G5, C6 (Arpeggiated)
+                const frequencies = [523.25, 659.25, 783.99, 1046.50];
+
+                frequencies.forEach((freq, index) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+
+                    osc.type = 'triangle'; // Smoother than sine for chords
+                    osc.frequency.setValueAtTime(freq, startTime + (index * 0.08)); // Slight stagger
+
+                    // Envelope
+                    gain.gain.setValueAtTime(0, startTime + (index * 0.08));
+                    gain.gain.linearRampToValueAtTime(0.15, startTime + (index * 0.08) + 0.05); // Attack
+                    gain.gain.exponentialRampToValueAtTime(0.001, startTime + (index * 0.08) + 1.2); // Long Decay
+
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+
+                    osc.start(startTime + (index * 0.08));
+                    osc.stop(startTime + (index * 0.08) + 1.2);
+                });
+            } else {
+                // Negative: Low Dissonance
+                const frequencies = [150, 110];
+                frequencies.forEach((freq) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, startTime);
+                    osc.frequency.exponentialRampToValueAtTime(freq * 0.5, startTime + 0.4);
+
+                    gain.gain.setValueAtTime(0.2, startTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.4);
+
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+
+                    osc.start(startTime);
+                    osc.stop(startTime + 0.4);
+                });
+            }
+        } catch (e) {
+            console.error("Audio play failed", e);
         }
     };
-
-    const handleAddFromClass = (name: string) => {
-        if (students.some(s => s.name === name)) {
-            alert("هذا الطالب مضاف بالفعل.");
-            return;
-        }
-        addStudent(name);
-        // Optional: Close modal or keep open for multiple adds
-        // setShowClassListModal(false); 
-    };
-
-    const filteredClassStudents = classStudents.filter(name =>
-        name.includes(searchTerm)
-    );
 
     const handlePointUpdate = (id: string, delta: number, isGroup: boolean) => {
         if (isGroup) {
@@ -67,24 +123,34 @@ export const ParticipationManager: React.FC = () => {
         }
 
         // Trigger Animation & Sound
+        // Clear previous timeout for this ID to prevent early removal
+        if (animationTimeouts.current[id]) {
+            clearTimeout(animationTimeouts.current[id]);
+        }
+
+        // Force re-render of animation by updating key
+        setAnimationKeys(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+
         setAnimatingId(id);
         setAnimationType(delta > 0 ? 'positive' : 'negative');
 
         if (delta > 0) {
-            if (isSoundEnabled) positiveSoundRef.current?.play().catch(() => { });
+            if (isSoundEnabled) playTone('positive');
             const randomMsg = POSITIVE_MESSAGES[Math.floor(Math.random() * POSITIVE_MESSAGES.length)];
-            setOverlayMessage({ text: randomMsg, type: 'positive' });
+            // Use unique ID with random component to ensure key uniqueness even in same ms
+            setMessageQueue(prev => [...prev, { id: Date.now() + Math.random(), text: randomMsg, type: 'positive' }]);
         } else {
-            if (isSoundEnabled) neutralSoundRef.current?.play().catch(() => { });
+            if (isSoundEnabled) playTone('negative');
             const randomMsg = NEUTRAL_MESSAGES[Math.floor(Math.random() * NEUTRAL_MESSAGES.length)];
-            setOverlayMessage({ text: randomMsg, type: 'negative' });
+            setMessageQueue(prev => [...prev, { id: Date.now() + Math.random(), text: randomMsg, type: 'negative' }]);
         }
 
-        // Reset animation state
-        setTimeout(() => {
-            setAnimatingId(null);
-            setAnimationType(null);
-            setOverlayMessage(null);
+        // Set new timeout to clear animation
+        animationTimeouts.current[id] = setTimeout(() => {
+            setAnimatingId(prev => prev === id ? null : prev);
+            if (animatingId === id) {
+                setAnimationType(null);
+            }
         }, 3000);
     };
 
@@ -93,18 +159,19 @@ export const ParticipationManager: React.FC = () => {
     return (
         <div className="flex flex-col h-full relative">
             {/* Overlay Message */}
-            {overlayMessage && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-                    {overlayMessage.type === 'positive' && (
+            {currentMessage && (
+                <div key={currentMessage.id} className="fixed inset-0 z-50 flex items-start pt-32 justify-center pointer-events-none">
+                    {currentMessage.type === 'positive' && (
                         <div className="absolute inset-0 z-0">
                             <ReactConfetti width={width} height={height} recycle={false} numberOfPieces={500} gravity={0.2} />
                         </div>
                     )}
-                    <div className={clsx(
-                        "bg-white/90 backdrop-blur-md p-10 rounded-3xl shadow-2xl transform transition-all animate-in zoom-in duration-300 border-4 relative z-10",
-                        overlayMessage.type === 'positive' ? "border-green-500 text-green-700" : "border-red-500 text-red-700"
-                    )}>
-                        <h2 className="text-5xl font-black text-center mb-2">{overlayMessage.text}</h2>
+                    <div
+                        className={clsx(
+                            "bg-white/95 backdrop-blur-xl p-10 rounded-3xl shadow-2xl transform transition-all animate-in slide-in-from-top-20 fade-in duration-500 border-4 relative z-10",
+                            currentMessage.type === 'positive' ? "border-green-500 text-green-700" : "border-red-500 text-red-700"
+                        )}>
+                        <h2 className="text-5xl font-black text-center mb-2">{currentMessage.text}</h2>
                     </div>
                 </div>
             )}
@@ -135,35 +202,8 @@ export const ParticipationManager: React.FC = () => {
                     </button>
                 </div>
 
-                {/* Fixed Top Controls for Individual Tab */}
-                {activeTab === 'individual' && (
-                    <div className="space-y-4">
-                        <button
-                            onClick={() => setShowClassListModal(true)}
-                            className="w-full bg-blue-50 text-primary-blue border-2 border-dashed border-blue-200 rounded-xl p-3 flex items-center justify-center gap-2 font-bold hover:bg-blue-100 transition-colors"
-                        >
-                            <Users size={20} />
-                            إضافة طالب من قائمة الفصل
-                        </button>
+                {/* Fixed Top Controls for Individual Tab - REMOVED */}
 
-                        <form onSubmit={handleAddStudent} className="flex gap-2">
-                            <input
-                                type="text"
-                                value={newStudentName}
-                                onChange={(e) => setNewStudentName(e.target.value)}
-                                placeholder="اسم الطالب..."
-                                className="flex-1 px-3 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:border-primary-blue font-medium"
-                            />
-                            <button
-                                type="submit"
-                                className="bg-primary-green text-white px-4 rounded-lg hover:bg-opacity-90"
-                                title="إضافة طالب"
-                            >
-                                <UserPlus size={24} />
-                            </button>
-                        </form>
-                    </div>
-                )}
             </div>
 
             {/* Scrollable Content Area */}
@@ -177,14 +217,75 @@ export const ParticipationManager: React.FC = () => {
                         )}
                         {students.map((student) => (
                             <div
-                                key={student.id}
+                                key={student.id + (animationKeys[student.id] || '')}
                                 className={clsx(
                                     "flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-100 transition-all duration-300",
                                     animatingId === student.id && animationType === 'positive' && "scale-105 bg-green-50 border-green-200 shadow-md",
                                     animatingId === student.id && animationType === 'negative' && "shake bg-red-50 border-red-200"
                                 )}
                             >
-                                <span className="font-bold text-gray-800 truncate ml-2 text-lg">{student.name}</span>
+                                {editingId === student.id ? (
+                                    <form
+                                        onSubmit={(e) => {
+                                            e.preventDefault();
+                                            if (editName.trim()) {
+                                                updateStudentName(student.id, editName.trim());
+                                                setEditingId(null);
+                                            }
+                                        }}
+                                        className="flex items-center gap-2 flex-1"
+                                    >
+                                        <input
+                                            type="text"
+                                            value={editName}
+                                            onChange={(e) => setEditName(e.target.value)}
+                                            className="px-2 py-1 border border-primary-blue rounded-lg bg-white focus:outline-none w-full font-bold text-gray-800"
+                                            autoFocus
+                                            onBlur={() => {
+                                                // Optional: save on blur or cancel? Let's keep manual save to avoid accidental edits
+                                            }}
+                                        />
+                                        <button
+                                            type="submit"
+                                            className="text-green-600 hover:text-green-700 bg-green-100 p-1.5 rounded-lg"
+                                        >
+                                            <Check size={16} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditingId(null)}
+                                            className="text-red-500 hover:text-red-600 bg-red-100 p-1.5 rounded-lg"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    </form>
+                                ) : (
+                                    <div className="flex items-center gap-2 flex-1 overflow-hidden">
+                                        <span className="font-bold text-gray-800 truncate ml-2 text-lg">{student.name}</span>
+                                        <button
+                                            onClick={() => {
+                                                setEditingId(student.id);
+                                                setEditName(student.name);
+                                            }}
+                                            className="text-gray-400 hover:text-primary-blue opacity-50 hover:opacity-100 transition-opacity"
+                                            title="تعديل الاسم"
+                                        >
+                                            <Edit2 size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (window.confirm(`هل تريد حذف الطالب ${student.name} من هذا الفصل؟`)) {
+                                                    deleteStudent(student.id);
+                                                }
+                                            }}
+                                            className="text-gray-400 hover:text-red-500 opacity-50 hover:opacity-100 transition-opacity"
+                                            title="حذف الطالب"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                )}
+
                                 <div className="flex items-center gap-3">
                                     <button
                                         onClick={() => handlePointUpdate(student.id, 5, false)}
@@ -212,7 +313,7 @@ export const ParticipationManager: React.FC = () => {
                     <div className="space-y-4">
                         {groups.map((group) => (
                             <div
-                                key={group.id}
+                                key={group.id + (animationKeys[group.id] || '')}
                                 className={clsx(
                                     "flex flex-col bg-gray-50 p-4 rounded-xl border border-gray-100 transition-all duration-300 gap-4",
                                     animatingId === group.id && animationType === 'positive' && "scale-105 bg-green-50 border-green-200 shadow-md",
@@ -289,60 +390,7 @@ export const ParticipationManager: React.FC = () => {
 
 
 
-            {/* Class List Modal */}
-            {showClassListModal && (
-                <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in duration-200">
-                        <div className="p-4 border-b flex items-center justify-between bg-gray-50">
-                            <h3 className="font-bold text-lg text-gray-800">قائمة الفصل</h3>
-                            <button onClick={() => setShowClassListModal(false)} className="text-gray-400 hover:text-gray-600">
-                                <X size={24} />
-                            </button>
-                        </div>
 
-                        <div className="p-4 border-b">
-                            <div className="relative">
-                                <Search className="absolute right-3 top-3 text-gray-400" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="بحث عن طالب..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full p-2 pr-10 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary-blue focus:border-transparent outline-none transition-all"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                            {filteredClassStudents.length === 0 ? (
-                                <p className="text-center text-gray-400 py-8">لا يوجد طلاب مطابقين</p>
-                            ) : (
-                                filteredClassStudents.map((name, idx) => {
-                                    const isAdded = students.some(s => s.name === name);
-                                    return (
-                                        <button
-                                            key={idx}
-                                            onClick={() => handleAddFromClass(name)}
-                                            disabled={isAdded}
-                                            className={clsx(
-                                                "w-full text-right p-3 rounded-lg flex items-center justify-between transition-all",
-                                                isAdded ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "hover:bg-blue-50 text-gray-700 hover:text-primary-blue"
-                                            )}
-                                        >
-                                            <span className="font-medium">{name}</span>
-                                            {isAdded ? (
-                                                <span className="text-xs bg-gray-200 px-2 py-1 rounded text-gray-500">مضاف</span>
-                                            ) : (
-                                                <Plus size={18} />
-                                            )}
-                                        </button>
-                                    );
-                                })
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Leader Selection Modal */}
             {leaderModalOpen && (

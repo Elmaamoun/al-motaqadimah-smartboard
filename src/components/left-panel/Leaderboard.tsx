@@ -9,11 +9,13 @@ export const Leaderboard: React.FC = () => {
     const { width, height } = useWindowSize();
     const [showCelebration, setShowCelebration] = useState(false);
 
-    const topStudent = students.length > 0
-        ? [...students].sort((a, b) => b.points - a.points)[0]
-        : null;
+    const maxStudentPoints = students.length > 0 ? Math.max(...students.map(s => s.points)) : 0;
+    const topStudents = students.filter(s => s.points === maxStudentPoints && s.points > 0);
+    const topStudent = topStudents.length > 0 ? topStudents[0] : null;
 
-    const topGroup = [...groups].sort((a, b) => b.points - a.points)[0];
+    const maxGroupPoints = groups.length > 0 ? Math.max(...groups.map(g => g.points)) : 0;
+    const topGroups = groups.filter(g => g.points === maxGroupPoints && g.points > 0);
+    const topGroup = topGroups.length > 0 ? topGroups[0] : groups[0]; // fallback to first group for safety if none > 0, though we check > 0 later
 
     return (
         <div className="mt-auto pt-4 border-t border-gray-200">
@@ -31,10 +33,11 @@ export const Leaderboard: React.FC = () => {
                     <div className="relative z-10">
                         <p className="text-white font-semibold text-sm mb-1 opacity-95">الطالب المتميز</p>
                         <p className="font-bold text-base truncate text-white">
-                            {topStudent && topStudent.points > 0 ? topStudent.name : '-'}
+                            {topStudent ? topStudent.name : '-'}
+                            {topStudents.length > 1 && <span className="text-xs font-normal opacity-80 mr-1">(+{topStudents.length - 1})</span>}
                         </p>
                         <p className="text-lg font-bold mt-1 font-mono bg-white/20 inline-block px-2 py-0.5 rounded text-white">
-                            {topStudent && topStudent.points > 0 ? topStudent.points : 0} نقاط
+                            {topStudent ? topStudent.points : 0} نقاط
                         </p>
                     </div>
                 </div>
@@ -47,12 +50,13 @@ export const Leaderboard: React.FC = () => {
                     <div className="relative z-10">
                         <p className="text-white font-semibold text-sm mb-1 opacity-95">المجموعة المتميزة</p>
                         <p className="font-bold text-base truncate text-white">
-                            {topGroup.points > 0 ? topGroup.name : '-'}
+                            {topGroup && topGroup.points > 0 ? topGroup.name : '-'}
+                            {topGroups.length > 1 && <span className="text-xs font-normal opacity-80 mr-1">(+{topGroups.length - 1})</span>}
                         </p>
                         <p className="text-lg font-bold mt-1 font-mono bg-white/20 inline-block px-2 py-0.5 rounded text-white">
-                            {topGroup.points > 0 ? topGroup.points : 0} نقاط
+                            {topGroup && topGroup.points > 0 ? topGroup.points : 0} نقاط
                         </p>
-                        {topGroup.leader && (
+                        {topGroup && topGroup.leader && (
                             <p className="text-xs mt-1 text-white/80 font-medium">
                                 القائد: {topGroup.leader}
                             </p>
@@ -71,7 +75,7 @@ export const Leaderboard: React.FC = () => {
 
             {/* Celebration Overlay */}
             {showCelebration && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm overflow-y-auto">
                     <Confetti
                         width={width}
                         height={height}
@@ -82,38 +86,58 @@ export const Leaderboard: React.FC = () => {
 
                     <button
                         onClick={() => setShowCelebration(false)}
-                        className="absolute top-8 right-8 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors"
+                        className="fixed top-8 right-8 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors z-[60]"
                     >
                         <X size={32} />
                     </button>
 
-                    <div className="text-center text-white animate-bounce-in">
+                    <div className="text-center text-white animate-bounce-in p-8 w-full max-w-5xl">
                         <h1 className="text-6xl font-bold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500 drop-shadow-lg">
                             أحسنتم!
                         </h1>
-                        <p className="text-2xl mb-12 opacity-90">مبروك للطالب المتميز والمجموعة المتميزة</p>
+                        <p className="text-2xl mb-12 opacity-90">مبروك للمتميزين</p>
 
-                        <div className="flex gap-12 justify-center">
-                            <div className="bg-white/10 backdrop-blur p-8 rounded-2xl border border-white/20 transform hover:scale-105 transition-transform">
-                                <Crown size={64} className="text-yellow-400 mx-auto mb-4" />
-                                <p className="text-xl opacity-80 mb-2">الطالب المتميز</p>
-                                <p className="text-4xl font-bold text-primary-blue bg-white px-6 py-2 rounded-full">
-                                    {topStudent && topStudent.points > 0 ? topStudent.name : '-'}
-                                </p>
-                            </div>
+                        <div className="flex flex-col md:flex-row gap-12 justify-center items-start">
+                            {/* Top Students */}
+                            {topStudents.length > 0 && (
+                                <div className="flex-1 w-full">
+                                    <div className="bg-white/10 backdrop-blur p-8 rounded-2xl border border-white/20 transform hover:scale-105 transition-transform">
+                                        <Crown size={64} className="text-yellow-400 mx-auto mb-4" />
+                                        <p className="text-xl opacity-80 mb-4">الطلاب المتميزون</p>
+                                        <div className="flex flex-wrap gap-3 justify-center">
+                                            {topStudents.map((s, idx) => (
+                                                <div key={idx} className="text-4xl font-bold text-primary-blue bg-white px-6 py-2 rounded-full shadow-lg">
+                                                    {s.name}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
-                            <div className="bg-white/10 backdrop-blur p-8 rounded-2xl border border-white/20 transform hover:scale-105 transition-transform">
-                                <Users size={64} className="text-green-400 mx-auto mb-4" />
-                                <p className="text-xl opacity-80 mb-2">المجموعة المتميزة</p>
-                                <p className="text-4xl font-bold text-primary-green bg-white px-6 py-2 rounded-full">
-                                    {topGroup.points > 0 ? topGroup.name : '-'}
-                                </p>
-                                {topGroup.leader && (
-                                    <p className="text-lg opacity-80 mt-2 text-white">
-                                        القائد: {topGroup.leader}
-                                    </p>
-                                )}
-                            </div>
+                            {/* Top Groups */}
+                            {topGroups.length > 0 && (
+                                <div className="flex-1 w-full">
+                                    <div className="bg-white/10 backdrop-blur p-8 rounded-2xl border border-white/20 transform hover:scale-105 transition-transform">
+                                        <Users size={64} className="text-green-400 mx-auto mb-4" />
+                                        <p className="text-xl opacity-80 mb-4">المجموعات المتميزة</p>
+                                        <div className="flex flex-col gap-4">
+                                            {topGroups.map((g, idx) => (
+                                                <div key={idx} className="flex flex-col items-center p-2 rounded-xl bg-white/5">
+                                                    <p className="text-4xl font-bold text-primary-green bg-white px-6 py-2 rounded-full shadow-lg mb-2">
+                                                        {g.name}
+                                                    </p>
+                                                    {g.leader && (
+                                                        <p className="text-lg opacity-80 text-white">
+                                                            القائد: {g.leader}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

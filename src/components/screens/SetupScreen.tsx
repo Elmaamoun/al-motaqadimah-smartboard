@@ -3,6 +3,20 @@ import { useApp, SUBJECTS } from '../../context/AppContext';
 import { Upload, Play, BookOpen, GraduationCap, FileText, Layers, Calendar, Users, Info, X } from 'lucide-react';
 import { DrawingCanvas } from '../common/DrawingCanvas';
 
+import studentsData from '../../data/students.json'; // Direct import for filtering
+
+// Grade mapping helper
+const GRADE_MAP: Record<number, string> = {
+    1: "الصف الأول",
+    2: "الصف الثاني",
+    3: "الصف الثالث",
+    4: "الصف الرابع",
+    5: "الصف الخامس",
+    6: "الصف السادس",
+};
+
+const REVERSE_GRADE_MAP: Record<string, number> = Object.entries(GRADE_MAP).reduce((acc, [k, v]) => ({ ...acc, [v]: Number(k) }), {});
+
 export const SetupScreen: React.FC = () => {
     const { lessonSetup, setLessonSetup, startSession, setPdfFile, pdfFile, loadClassStudents } = useApp();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -10,8 +24,77 @@ export const SetupScreen: React.FC = () => {
     const [errors, setErrors] = useState<Record<string, boolean>>({});
     const [generalError, setGeneralError] = useState<string | null>(null);
 
-    const handleChange = (field: keyof typeof lessonSetup, value: string) => {
-        setLessonSetup({ ...lessonSetup, [field]: value });
+    // Dynamic Filtering Logic
+    const availableGrades = React.useMemo(() => {
+        if (!lessonSetup.stage) return [];
+        const stageData = studentsData.filter(s => s.stage === lessonSetup.stage);
+
+        // Get unique grades
+        let grades = Array.from(new Set(stageData.map(s => s.grade))).sort((a, b) => a - b);
+
+        // STRICT: If Tahfeeth, only show Grades 1-3 if they exist (Memorization typically Lower Primary)
+        // Adjust this based on specific school rules, but user prompt said "Show ONLY memorization grades (1-3)"
+        if (lessonSetup.system === 'تحفيظ') {
+            grades = grades.filter(g => [1, 2, 3].includes(g) && stageData.some(s => s.grade === g && typeof s.class === 'string' && s.class.includes('تحفيظ')));
+        } else {
+            // General: Exclude grades that ONLY have Tahfeeth classes? 
+            // Or typically General covers all 1-6.
+            // We should ensure we don't show a grade if it has NO general classes.
+            grades = grades.filter(g => stageData.some(s => s.grade === g && (typeof s.class !== 'string' || !s.class.includes('تحفيظ'))));
+        }
+
+        return grades.map(g => GRADE_MAP[g] || `الصف ${g}`);
+    }, [lessonSetup.stage, lessonSetup.system]);
+
+    const availableClasses = React.useMemo(() => {
+        if (!lessonSetup.stage || !lessonSetup.grade) return [];
+        const gradeNum = REVERSE_GRADE_MAP[lessonSetup.grade];
+        const isHifz = lessonSetup.system === 'تحفيظ';
+
+        // Find available classes for this stage, grade, system
+        const validClasses = new Set<string>();
+
+        studentsData.forEach(c => {
+            if (c.stage !== lessonSetup.stage) return;
+            if (c.grade !== gradeNum) return;
+
+            const isHifzClass = typeof c.class === 'string' && c.class.includes('تحفيظ');
+            if (isHifz && !isHifzClass) return;
+            if (!isHifz && isHifzClass) return;
+
+            // Extract display value (1, 2, 3...)
+            let displayVal = String(c.class);
+            if (isHifzClass) {
+                // Remove "تحفيظ" and trim
+                displayVal = displayVal.replace('تحفيظ', '').trim();
+            }
+            validClasses.add(displayVal);
+        });
+
+        return Array.from(validClasses).sort((a, b) => Number(a) - Number(b));
+    }, [lessonSetup.stage, lessonSetup.system, lessonSetup.grade]);
+
+    // Reset Grade/Class if invalid on change
+    React.useEffect(() => {
+        if (lessonSetup.grade && !availableGrades.includes(lessonSetup.grade)) {
+            // Don't auto-reset blindly, user might be switching systems. But better to consistent.
+            // setLessonSetup({...lessonSetup, grade: ''});
+        }
+    }, [availableGrades]); // Be careful with infinite loops.
+
+    const handleChange = (field: keyof typeof lessonSetup, value: any) => {
+        const next = { ...lessonSetup, [field]: value };
+
+        // Strict reset logic to prevent invalid states
+        if (field === 'system') {
+            next.grade = '';
+            next.className = '';
+        }
+        if (field === 'grade') {
+            next.className = '';
+        }
+
+        setLessonSetup(next);
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,7 +132,12 @@ export const SetupScreen: React.FC = () => {
             return;
         }
 
-        loadClassStudents(lessonSetup.stage, lessonSetup.grade, lessonSetup.className);
+        const success = loadClassStudents(lessonSetup.stage, lessonSetup.grade, lessonSetup.className, lessonSetup.system);
+        if (!success) {
+            setGeneralError("لا توجد قائمة طلاب لهذا الاختيار (تأكد من اختيار النظام والصف والفصل الصحيح)");
+            return;
+        }
+
         startSession();
     };
 
@@ -57,24 +145,59 @@ export const SetupScreen: React.FC = () => {
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6 sm:p-4 overflow-y-auto">
             <div className="bg-white w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px] max-h-[calc(100vh-40px)] overflow-y-auto">
 
-                {/* Branding Side */}
-                <div className="bg-primary-blue text-white p-10 md:w-1/3 flex flex-col items-center justify-center text-center relative overflow-hidden">
-                    <div className="absolute inset-0 bg-white/5 pattern-grid-lg opacity-20"></div>
-                    <img src="/logo.png" alt="School Logo" className="max-w-[180px] h-auto object-contain mb-8 relative z-10" />
-                    <h1 className="text-4xl font-bold mb-4 relative z-10">مدارس المتقدمة</h1>
-                    <p className="text-blue-100 text-xl relative z-10">بوابة المستقبل التعليمية</p>
-                    <div className="mt-16 space-y-4 opacity-80 text-base relative z-10">
-                        <p>نظام إدارة الحصص الذكي</p>
-                        <p>الإصدار 1.0</p>
+                {/* Branding Side - Final Layout (Solid Teal & Glass) */}
+                <div className="bg-primary-blue text-white p-8 md:w-1/3 flex flex-col items-center justify-between text-center relative overflow-hidden z-10 shadow-xl">
+                    {/* Subtle Texture for Depth */}
+                    <div className="absolute inset-0 bg-white/5 opacity-10 pattern-grid-lg"></div>
+
+                    {/* Main Content Area */}
+                    <div className="flex-1 flex flex-col items-center justify-center w-full z-10 px-4">
+                        {/* Logo Card - Glass Effect */}
+                        <div className="mb-8 p-6 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm shadow-md">
+                            <img src="/logo.png" alt="School Logo" className="max-w-[150px] md:max-w-[170px] h-auto object-contain" />
+                        </div>
+
+                        {/* Typography Block */}
+                        <div className="space-y-3">
+                            {/* Main Title - Bold & Clean */}
+                            <h1 className="text-3xl md:text-4xl font-bold text-white tracking-wide leading-tight font-sans">
+                                مدارس المتقدمة
+                            </h1>
+
+                            {/* Slogan - White with Opacity (No Yellow) */}
+                            <p className="text-white/80 text-lg font-medium tracking-wide">
+                                جيل ينتج المعرفة
+                            </p>
+
+                            {/* Subtitle - Smaller & Lighter */}
+                            <p className="text-blue-200 text-sm font-light opacity-90 pt-1">
+                                بوابة المستقبل التعليمية
+                            </p>
+                        </div>
                     </div>
 
-                    <button
-                        onClick={() => setShowAboutModal(true)}
-                        className="mt-8 text-white/80 hover:text-white text-sm underline decoration-white/30 hover:decoration-white transition-all relative z-10 flex items-center gap-2"
-                    >
-                        <Info size={16} />
-                        حول التطبيق
-                    </button>
+                    {/* Footer - Clean, Standard, No Version Badge */}
+                    <div className="flex flex-col items-center w-full z-10 space-y-4 pb-4">
+                        {/* Subtle Divider */}
+                        <div className="w-16 h-px bg-white/20 rounded-full mb-1"></div>
+
+                        {/* Title: Smart System (Clearer/White) */}
+                        <p className="text-white text-sm font-medium tracking-wide opacity-90">
+                            نظام إدارة الحصص الذكي
+                        </p>
+
+                        {/* Interactive: About Button with Icon */}
+                        <button
+                            onClick={() => setShowAboutModal(true)}
+                            className="flex items-center gap-2 text-blue-100 hover:text-white transition-all cursor-pointer group px-4 py-2 rounded-full hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30"
+                            aria-label="About Application"
+                        >
+                            <Info size={16} className="opacity-80 group-hover:opacity-100" />
+                            <span className="underline decoration-blue-400/30 hover:decoration-white/80 underline-offset-4 text-xs font-normal">
+                                حول التطبيق
+                            </span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Form Side */}
@@ -89,7 +212,7 @@ export const SetupScreen: React.FC = () => {
 
                     <form onSubmit={handleSubmit} className="space-y-6">
 
-                        {/* Row 1: Stage + System */}
+                        {/* Row 1: Stage + System + Alert Toggle */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <label className="block text-base font-semibold text-slate-700">المرحلة الدراسية</label>
@@ -107,34 +230,34 @@ export const SetupScreen: React.FC = () => {
                             </div>
                             <div className="space-y-2">
                                 <label className="block text-base font-semibold text-slate-700">النظام</label>
-                                <select
-                                    value={lessonSetup.system}
-                                    onChange={(e) => handleChange('system', e.target.value)}
-                                    className={`w-full p-3 text-lg border rounded-xl shadow-sm focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent py-2 ${errors.system ? 'border-red-600 bg-red-50' : 'border-[#D1D5DB] bg-[#F3F4F6]'}`}
-                                >
-                                    <option value="عام">عام</option>
-                                    <option value="تحفيظ">تحفيظ</option>
-                                </select>
+                                <div className="flex flex-col gap-2">
+                                    <select
+                                        value={lessonSetup.system}
+                                        onChange={(e) => handleChange('system', e.target.value)}
+                                        className={`w-full p-3 text-lg border rounded-xl shadow-sm focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent py-2 ${errors.system ? 'border-red-600 bg-red-50' : 'border-[#D1D5DB] bg-[#F3F4F6]'}`}
+                                    >
+                                        <option value="عام">عام</option>
+                                        <option value="تحفيظ">تحفيظ</option>
+                                    </select>
+                                </div>
                                 {errors.system && <p className="text-red-600 text-sm mt-1">برجاء تعبئة هذه الخانة</p>}
                             </div>
                         </div>
 
-                        {/* Row 2: Grade + Class */}
+                        {/* Row 2: Grade + Class (Dynamic) */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <label className="block text-base font-semibold text-slate-700">الصف</label>
                                 <select
                                     value={lessonSetup.grade}
                                     onChange={(e) => handleChange('grade', e.target.value)}
-                                    className={`w-full p-3 text-lg border rounded-xl shadow-sm focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent py-2 ${errors.grade ? 'border-red-600 bg-red-50' : 'border-[#D1D5DB] bg-[#F3F4F6]'}`}
+                                    disabled={!lessonSetup.stage}
+                                    className={`w-full p-3 text-lg border rounded-xl shadow-sm focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent py-2 ${errors.grade ? 'border-red-600 bg-red-50' : 'border-[#D1D5DB] bg-[#F3F4F6] disabled:opacity-50 disabled:bg-gray-100'}`}
                                 >
                                     <option value="">اختر الصف</option>
-                                    <option value="الصف الأول">الصف الأول</option>
-                                    <option value="الصف الثاني">الصف الثاني</option>
-                                    <option value="الصف الثالث">الصف الثالث</option>
-                                    <option value="الصف الرابع">الصف الرابع</option>
-                                    <option value="الصف الخامس">الصف الخامس</option>
-                                    <option value="الصف السادس">الصف السادس</option>
+                                    {availableGrades.map(g => (
+                                        <option key={g} value={g}>{g}</option>
+                                    ))}
                                 </select>
                                 {errors.grade && <p className="text-red-600 text-sm mt-1">برجاء تعبئة هذه الخانة</p>}
                             </div>
@@ -145,15 +268,17 @@ export const SetupScreen: React.FC = () => {
                                     <select
                                         value={lessonSetup.className}
                                         onChange={(e) => handleChange('className', e.target.value)}
-                                        className={`w-full p-3 pr-10 text-lg border rounded-xl shadow-sm focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent py-2 appearance-none ${errors.className ? 'border-red-600 bg-red-50' : 'border-[#D1D5DB] bg-[#F3F4F6]'}`}
+                                        disabled={!lessonSetup.grade}
+                                        className={`w-full p-3 pr-10 text-lg border rounded-xl shadow-sm focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent py-2 appearance-none ${errors.className ? 'border-red-600 bg-red-50' : 'border-[#D1D5DB] bg-[#F3F4F6] disabled:opacity-50 disabled:bg-gray-100'}`}
                                     >
                                         <option value="">اختر الفصل</option>
-                                        <option value="1">1</option>
-                                        <option value="2">2</option>
-                                        <option value="3">3</option>
-                                        <option value="4">4</option>
-                                        <option value="5">5</option>
-                                        <option value="6">6</option>
+                                        {availableClasses.length > 0 ? (
+                                            availableClasses.map(c => (
+                                                <option key={c} value={c}>{c}</option>
+                                            ))
+                                        ) : (
+                                            <option value="" disabled>لا توجد فصول متاحة</option>
+                                        )}
                                     </select>
                                 </div>
                                 {errors.className && <p className="text-red-600 text-sm mt-1">برجاء تعبئة هذه الخانة</p>}
@@ -299,12 +424,12 @@ export const SetupScreen: React.FC = () => {
                                     <Upload className="text-gray-500 group-hover:text-primary-blue" size={24} />
                                 </div>
                                 <span className="text-gray-600 font-medium text-lg">
-                                    {pdfFile ? pdfFile.name : 'اضغط لاختيار ملف الكتاب المدرسي (PDF)'}
+                                    {pdfFile ? pdfFile.name : 'اضغط لاختيار ملف (PDF، صور، فيديو)'}
                                 </span>
                                 <input
                                     ref={fileInputRef}
                                     type="file"
-                                    accept=".pdf,.docx,.pptx"
+                                    accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp,.mp4,.webm"
                                     onChange={handleFileChange}
                                     className="hidden"
                                 />
