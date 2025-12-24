@@ -86,6 +86,12 @@ interface AppContextType {
     loadClassStudents: (stage: string, grade: string, className: string, system: string) => boolean;
     updateStudentName: (id: string, name: string) => void;
     deleteStudent: (id: string) => void;
+
+    // Fullscreen State
+    isFullscreenMode: boolean;
+    toggleFullscreenMode: () => void;
+    isEditLocked: boolean;
+    toggleEditLock: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -123,8 +129,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const [isAnnotationMode, setIsAnnotationMode] = useState(false);
     const [isSoundEnabled, setIsSoundEnabled] = useState(true);
     const [classStudents, setClassStudents] = useState<string[]>([]);
+    const [isFullscreenMode, setIsFullscreenMode] = useState(false);
+    const [isEditLocked, setIsEditLocked] = useState(true); // Default to locked
 
     const toggleSound = () => setIsSoundEnabled(prev => !prev);
+    const toggleFullscreenMode = () => setIsFullscreenMode(prev => !prev);
+    const toggleEditLock = () => setIsEditLocked(prev => !prev);
 
     const loadClassStudents = (stage: string, grade: string, className: string, system: string): boolean => {
         // Map grade string to number (e.g., "الصف الأول" -> 1)
@@ -217,6 +227,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const endSession = () => {
         setActiveSession(false);
+        // Clear drawing data to prevent persistence across sessions
+        setLessonSetup(prev => ({
+            ...prev,
+            unitDrawing: undefined,
+            lessonTitleDrawing: undefined
+        }));
+        // Also clear from localStorage to be safe
+        const saved = localStorage.getItem('smartboardLessonSetup');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                delete parsed.unitDrawing;
+                delete parsed.lessonTitleDrawing;
+                localStorage.setItem('smartboardLessonSetup', JSON.stringify(parsed));
+            } catch (e) {
+                // Ignore
+            }
+        }
     };
 
     const addStudent = (name: string) => {
@@ -260,33 +288,63 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     return (
         <AppContext.Provider value={{
-            selectedSubject,
-            setSelectedSubject,
+            // Session
+            activeSession,
+            startSession,
+            endSession,
+
+            // Lesson
+            lessonSetup,
+            setLessonSetup, // Assuming setLessonSetup is intended here, not updateLessonSetup
+
+            // Participation
             students,
             addStudent,
             updateStudentPoints,
+            updateStudentName,
+            deleteStudent,
+
             groups,
+            // addGroup, // Not present in the current context, so not adding
             updateGroupPoints,
             updateGroupName,
             updateGroupLeader,
             deleteGroup,
-            lessonSetup,
-            setLessonSetup,
-            activeSession,
-            startSession,
-            endSession,
+
+            isSoundEnabled,
+            toggleSound,
+
+            // Files
             pdfFile,
             setPdfFile,
+
+            // Whiteboard
+            // whiteboardPages, // Not present in the current context, so not adding
+            // setWhiteboardPages, // Not present in the current context, so not adding
+            // activePageIndex, // Not present in the current context, so not adding
+            // setActivePageIndex, // Not present in the current context, so not adding
+
+            // Settings
+            selectedSubject,
+            setSelectedSubject,
+
+            // Annotations
             annotations,
             setAnnotations,
             isAnnotationMode,
             setIsAnnotationMode,
-            isSoundEnabled,
-            toggleSound,
+
+            // Class Roster
             classStudents,
             loadClassStudents,
-            updateStudentName,
-            deleteStudent
+
+            // Fullscreen
+            isFullscreenMode,
+            toggleFullscreenMode,
+
+            // Edit Lock
+            isEditLocked,
+            toggleEditLock
         }}>
             {children}
         </AppContext.Provider>

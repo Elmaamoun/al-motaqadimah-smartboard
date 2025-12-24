@@ -16,7 +16,7 @@ interface Stroke {
     isEraser: boolean;
 }
 
-const COLORS = ['#000000', '#EF4444', '#22C55E', '#3B82F6'];
+const COLORS = ['#000000', '#EF4444']; // Black and Red only
 
 export const Whiteboard: React.FC = () => {
     const [pages, setPages] = useState<{ strokes: Stroke[], redoStack: Stroke[] }[]>([
@@ -25,10 +25,12 @@ export const Whiteboard: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(0);
     const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
     const [color, setColor] = useState('#000000');
-    const [size] = useState(4);
+    const [size] = useState(8); // Increased from 4 to 8 for thicker lines
     const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
 
     const svgRef = useRef<SVGSVGElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const toolbarRef = useRef<HTMLDivElement>(null);
 
     const strokes = pages[currentPage].strokes;
     const redoStack = pages[currentPage].redoStack;
@@ -42,9 +44,14 @@ export const Whiteboard: React.FC = () => {
     const getSvgPoint = (e: React.PointerEvent | PointerEvent): Point => {
         if (!svgRef.current) return { x: 0, y: 0 };
         const rect = svgRef.current.getBoundingClientRect();
+
+        // Simple direct coordinate mapping
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
         return {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top,
+            x,
+            y,
             pressure: e.pressure,
         };
     };
@@ -55,7 +62,7 @@ export const Whiteboard: React.FC = () => {
         setCurrentStroke({
             points: [point],
             color: tool === 'eraser' ? '#FFFFFF' : color,
-            size: tool === 'eraser' ? 40 : size,
+            size: tool === 'eraser' ? 50 : size, // Increased eraser size from 40 to 50
             isEraser: tool === 'eraser',
         });
         // Clear redo stack on new action
@@ -175,17 +182,22 @@ export const Whiteboard: React.FC = () => {
                     </button>
                 </div>
 
-                {/* Toolbar - Floating, Equal Sizes, Icon Only */}
-                <div className="absolute top-16 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur shadow-lg border border-gray-200 rounded-2xl p-2 flex items-center gap-2 z-20">
+                {/* Toolbar - Responsive Horizontal */}
+                <div
+                    ref={toolbarRef}
+                    className="absolute top-16 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur shadow-lg border border-gray-200 rounded-2xl p-2 flex items-center gap-1.5 z-20"
+                    style={{ maxWidth: 'calc(100% - 2rem)' }}
+                >
 
                     {/* Color Palette */}
-                    <div className="flex items-center gap-2 pr-2 border-l border-gray-200 ml-2 order-2">
+                    <div className="flex items-center gap-1.5">
                         {COLORS.map((c) => (
                             <button
                                 key={c}
+                                type="button"
                                 onClick={() => { setColor(c); setTool('pen'); }}
                                 className={clsx(
-                                    "w-8 h-8 rounded-full transition-transform border-2",
+                                    "w-7 h-7 rounded-full transition-transform border-2",
                                     color === c && tool === 'pen' ? "scale-110 border-gray-400 ring-2 ring-blue-100" : "border-transparent hover:scale-105"
                                 )}
                                 style={{ backgroundColor: c }}
@@ -195,62 +207,67 @@ export const Whiteboard: React.FC = () => {
                     </div>
 
                     {/* Tools */}
-                    <div className="flex items-center gap-1 order-1">
+                    <div className="flex items-center gap-1">
                         <button
+                            type="button"
                             onClick={() => setTool('pen')}
                             className={clsx(
-                                "w-10 h-10 flex items-center justify-center rounded-xl transition-all",
+                                "w-9 h-9 flex items-center justify-center rounded-xl transition-all",
                                 tool === 'pen' ? "bg-blue-50 text-blue-600 shadow-inner" : "text-gray-500 hover:bg-gray-100"
                             )}
                             title="قلم"
                         >
-                            <Pen size={20} />
+                            <Pen size={18} />
                         </button>
                         <button
+                            type="button"
                             onClick={() => setTool('eraser')}
                             className={clsx(
-                                "w-10 h-10 flex items-center justify-center rounded-xl transition-all",
+                                "w-9 h-9 flex items-center justify-center rounded-xl transition-all",
                                 tool === 'eraser' ? "bg-gray-100 text-gray-800 shadow-inner" : "text-gray-500 hover:bg-gray-100"
                             )}
                             title="ممحاة"
                         >
-                            <Eraser size={20} />
+                            <Eraser size={18} />
                         </button>
                     </div>
 
-                    <div className="w-px h-8 bg-gray-200 mx-1 order-3"></div>
+                    <div className="w-px h-7 bg-gray-200 mx-1"></div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-1 order-4">
+                    <div className="flex items-center gap-1">
                         <button
+                            type="button"
                             onClick={handleUndo}
-                            className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 transition-colors"
+                            className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 transition-colors"
                             title="تراجع"
                         >
-                            <Undo size={20} />
+                            <Undo size={18} />
                         </button>
                         <button
+                            type="button"
                             onClick={handleRedo}
-                            className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 transition-colors"
+                            className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 transition-colors"
                             title="إعادة"
                         >
-                            <Redo size={20} />
+                            <Redo size={18} />
                         </button>
                         <button
+                            type="button"
                             onClick={handleClearPage}
-                            className="w-10 h-10 flex items-center justify-center rounded-xl text-red-500 hover:bg-red-50 transition-colors"
+                            className="w-9 h-9 flex items-center justify-center rounded-xl text-red-500 hover:bg-red-50 transition-colors"
                             title="مسح الكل"
                         >
-                            <Trash2 size={20} />
+                            <Trash2 size={18} />
                         </button>
                     </div>
                 </div>
 
                 {/* Canvas Area */}
-                <div className="flex-1 relative cursor-crosshair touch-none overflow-hidden">
+                <div ref={containerRef} className="flex-1 relative touch-none overflow-hidden">
                     <svg
                         ref={svgRef}
-                        className="w-full h-full block"
+                        className="w-full h-full block cursor-none"
                         onPointerDown={handlePointerDown}
                         onPointerMove={handlePointerMove}
                         onPointerUp={handlePointerUp}

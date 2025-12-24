@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import { Trophy, Crown, Users, PartyPopper, X } from 'lucide-react';
 import Confetti from 'react-confetti';
@@ -73,40 +74,42 @@ export const Leaderboard: React.FC = () => {
                 الاحتفال بالمتميزين
             </button>
 
-            {/* Celebration Overlay */}
-            {showCelebration && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm overflow-y-auto">
+            {/* Celebration Overlay - Rendered via Portal to escape scale wrapper */}
+            {showCelebration && ReactDOM.createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-primary-blue via-brand-aqua to-primary-green overflow-hidden">
                     <Confetti
                         width={width}
                         height={height}
                         recycle={true}
-                        numberOfPieces={500}
-                        colors={['#007FA3', '#8EC63F', '#00A8C9', '#FFD700', '#FFFFFF']}
+                        numberOfPieces={200}
+                        colors={['#FFFFFF', '#FFD700', '#FFA500', '#FF69B4', '#87CEEB']}
                     />
 
                     <button
                         onClick={() => setShowCelebration(false)}
-                        className="fixed top-8 right-8 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors z-[60]"
+                        className="fixed top-4 right-4 text-white/80 hover:text-white bg-white/20 hover:bg-white/30 p-2 rounded-full transition-colors z-[10000]"
                     >
-                        <X size={32} />
+                        <X size={28} />
                     </button>
 
-                    <div className="text-center text-white animate-bounce-in p-8 w-full max-w-5xl">
-                        <h1 className="text-6xl font-bold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500 drop-shadow-lg">
-                            أحسنتم!
+                    <div className="text-center text-white p-4 w-full max-w-4xl will-change-transform">
+                        {/* Main Title */}
+                        <h1 className="text-5xl font-black mb-2 text-white drop-shadow-lg">
+                            أحسنتم! 🎉
                         </h1>
-                        <p className="text-2xl mb-12 opacity-90">مبروك للمتميزين</p>
+                        <p className="text-xl mb-6 text-white/90">مبروك للمتميزين</p>
 
-                        <div className="flex flex-col md:flex-row gap-12 justify-center items-start">
+                        {/* Cards Container */}
+                        <div className="flex flex-row gap-6 justify-center items-stretch">
                             {/* Top Students */}
                             {topStudents.length > 0 && (
-                                <div className="flex-1 w-full">
-                                    <div className="bg-white/10 backdrop-blur p-8 rounded-2xl border border-white/20 transform hover:scale-105 transition-transform">
-                                        <Crown size={64} className="text-yellow-400 mx-auto mb-4" />
-                                        <p className="text-xl opacity-80 mb-4">الطلاب المتميزون</p>
-                                        <div className="flex flex-wrap gap-3 justify-center">
+                                <div className="flex-1 max-w-md">
+                                    <div className="bg-white/20 backdrop-blur-sm p-4 rounded-2xl border border-white/30 h-full">
+                                        <Crown size={40} className="text-yellow-300 mx-auto mb-2" />
+                                        <p className="text-base font-bold text-white mb-3">الطلاب المتميزون</p>
+                                        <div className="flex flex-wrap gap-2 justify-center">
                                             {topStudents.map((s, idx) => (
-                                                <div key={idx} className="text-4xl font-bold text-primary-blue bg-white px-6 py-2 rounded-full shadow-lg">
+                                                <div key={idx} className="text-lg font-bold text-primary-blue bg-white px-4 py-1.5 rounded-full shadow-md">
                                                     {s.name}
                                                 </div>
                                             ))}
@@ -117,21 +120,14 @@ export const Leaderboard: React.FC = () => {
 
                             {/* Top Groups */}
                             {topGroups.length > 0 && (
-                                <div className="flex-1 w-full">
-                                    <div className="bg-white/10 backdrop-blur p-8 rounded-2xl border border-white/20 transform hover:scale-105 transition-transform">
-                                        <Users size={64} className="text-green-400 mx-auto mb-4" />
-                                        <p className="text-xl opacity-80 mb-4">المجموعات المتميزة</p>
-                                        <div className="flex flex-col gap-4">
+                                <div className="flex-1 max-w-md">
+                                    <div className="bg-white/20 backdrop-blur-sm p-4 rounded-2xl border border-white/30 h-full">
+                                        <Users size={40} className="text-yellow-300 mx-auto mb-2" />
+                                        <p className="text-base font-bold text-white mb-3">المجموعات المتميزة</p>
+                                        <div className="flex flex-wrap gap-2 justify-center">
                                             {topGroups.map((g, idx) => (
-                                                <div key={idx} className="flex flex-col items-center p-2 rounded-xl bg-white/5">
-                                                    <p className="text-4xl font-bold text-primary-green bg-white px-6 py-2 rounded-full shadow-lg mb-2">
-                                                        {g.name}
-                                                    </p>
-                                                    {g.leader && (
-                                                        <p className="text-lg opacity-80 text-white">
-                                                            القائد: {g.leader}
-                                                        </p>
-                                                    )}
+                                                <div key={idx} className="text-lg font-bold text-primary-green bg-white px-4 py-1.5 rounded-full shadow-md">
+                                                    {g.name}
                                                 </div>
                                             ))}
                                         </div>
@@ -140,7 +136,8 @@ export const Leaderboard: React.FC = () => {
                             )}
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

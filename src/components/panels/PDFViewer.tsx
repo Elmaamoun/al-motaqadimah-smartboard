@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, Upload, Pen, Eraser, Undo, Monitor, FileText } from 'lucide-react';
 import { useApp, type Stroke, type Point } from '../../context/AppContext';
+import { useAppScale } from '../../utils/useAppScale';
 import { getStroke } from 'perfect-freehand';
 import clsx from 'clsx';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -13,12 +14,28 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
     import.meta.url,
 ).toString();
 
-export const PDFViewer: React.FC = () => {
-    const { pdfFile, setPdfFile, annotations, setAnnotations, isAnnotationMode, setIsAnnotationMode } = useApp();
+interface PDFViewerContentProps {
+    pdfFile: File | null;
+    setPdfFile: (file: File | null) => void;
+    annotations: Record<number, Stroke[]>;
+    setAnnotations: (annotations: Record<number, Stroke[]>) => void;
+    isAnnotationMode: boolean;
+    setIsAnnotationMode: (isMode: boolean) => void;
+}
+
+const PDFViewerContent: React.FC<PDFViewerContentProps> = React.memo(({
+    pdfFile,
+    setPdfFile,
+    annotations,
+    setAnnotations,
+    isAnnotationMode,
+    setIsAnnotationMode
+}) => {
     const [numPages, setNumPages] = useState<number>(0);
     const [pageNumber, setPageNumber] = useState<number>(1);
-    const [scale, setScale] = useState<number>(1.0);
+    const [scale, setScale] = useState<number>(1.55); // Default to 155% as requested
     const [pageInput, setPageInput] = useState<string>('1');
+    const [isAutoFitEnabled, setIsAutoFitEnabled] = useState<boolean>(false); // Smart auto-fit
 
     // Drag State
     const [isDragging, setIsDragging] = useState(false);
@@ -80,15 +97,27 @@ export const PDFViewer: React.FC = () => {
             // Defaulting to a safe calculation where 1.0 = full width of typical document
             // If container is 800px, scale 1.0. If 400px, scale 0.5.
             setScale((containerWidth - 40) / 800);
+            setIsAutoFitEnabled(true); // Enable auto-fit on Fit Width click
         }
     };
 
     useEffect(() => {
-        if (pdfFile) {
-            // Apply Fit Width-ish logic on load.
-            setTimeout(handleFitWidth, 100);
-        }
-    }, [pdfFile]);
+        if (!containerRef.current || !pdfFile) return;
+
+        // Smart ResizeObserver: only auto-scales when isAutoFitEnabled is true
+        const resizeObserver = new ResizeObserver(() => {
+            if (isAutoFitEnabled && containerRef.current) {
+                const containerWidth = containerRef.current.clientWidth;
+                setScale((containerWidth - 40) / 800);
+            }
+        });
+
+        resizeObserver.observe(containerRef.current);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [pdfFile, isAutoFitEnabled]);
 
     const handleMouseDown = (e: React.MouseEvent) => {
         if (isAnnotationMode) return;
@@ -114,12 +143,14 @@ export const PDFViewer: React.FC = () => {
 
     // --- Annotation Logic ---
 
+    const { scale: appScale } = useAppScale();
+
     const getSvgPoint = (e: React.PointerEvent): Point => {
         if (!svgRef.current) return { x: 0, y: 0 };
         const rect = svgRef.current.getBoundingClientRect();
         return {
-            x: (e.clientX - rect.left) / scale, // Adjust for scale
-            y: (e.clientY - rect.top) / scale,
+            x: (e.clientX - rect.left) / appScale, // Adjust for scale
+            y: (e.clientY - rect.top) / appScale,
             pressure: e.pressure,
         };
     };
@@ -309,7 +340,7 @@ export const PDFViewer: React.FC = () => {
                         {/* Zoom */}
                         <div className="flex items-center gap-2">
                             <button
-                                onClick={() => setScale(s => Math.max(0.5, s - 0.1))}
+                                onClick={() => { setScale(s => Math.max(0.5, s - 0.1)); setIsAutoFitEnabled(false); }}
                                 className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
                             >
                                 <ZoomOut size={20} />
@@ -318,7 +349,7 @@ export const PDFViewer: React.FC = () => {
                                 {Math.round(scale * 100)}%
                             </span>
                             <button
-                                onClick={() => setScale(s => Math.min(3.0, s + 0.1))}
+                                onClick={() => { setScale(s => Math.min(3.0, s + 0.1)); setIsAutoFitEnabled(false); }}
                                 className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
                             >
                                 <ZoomIn size={20} />
@@ -331,7 +362,7 @@ export const PDFViewer: React.FC = () => {
                                 <Monitor size={20} />
                             </button>
                             <button
-                                onClick={() => setScale(1.0)}
+                                onClick={() => { setScale(1.0); setIsAutoFitEnabled(false); }}
                                 className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
                                 title="الحجم الأصلي"
                             >
@@ -416,22 +447,21 @@ export const PDFViewer: React.FC = () => {
                                 {/* Annotation Overlay */}
                                 <svg
                                     ref={svgRef}
-                                    className="absolute inset-0 w-full h-full touch-none z-10 pointer-events-auto"
+                                    className="absolute inset-0 w-full h-full touch-none z-10 pointer-events-auto cursor-none"
                                     style={{ pointerEvents: isAnnotationMode ? 'auto' : 'none', top: 32, left: 32, right: 32, bottom: 32 }}
                                     onPointerDown={handlePointerDown}
                                     onPointerMove={handlePointerMove}
                                     onPointerUp={handlePointerUp}
                                     onPointerLeave={handlePointerUp}
-                                    viewBox={`0 0 ${svgRef.current?.clientWidth || 0} ${svgRef.current?.clientHeight || 0}`}
+
                                 >
-                                    <g transform={`scale(${scale})`}>
-                                        {(annotations[pageNumber] || []).map((stroke, i) => (
-                                            <g key={i}>{renderStroke(stroke)}</g>
-                                        ))}
-                                        {currentStroke && !currentStroke.isEraser && (
-                                            <g>{renderStroke(currentStroke)}</g>
-                                        )}
-                                    </g>
+
+                                    {(annotations[pageNumber] || []).map((stroke, i) => (
+                                        <g key={i}>{renderStroke(stroke)}</g>
+                                    ))}
+                                    {currentStroke && !currentStroke.isEraser && (
+                                        <g>{renderStroke(currentStroke)}</g>
+                                    )}
                                 </svg>
                             </div>
                         )}
@@ -440,4 +470,21 @@ export const PDFViewer: React.FC = () => {
             </div>
         </div>
     );
+});
+
+export const PDFViewer: React.FC = () => {
+    const { pdfFile, setPdfFile, annotations, setAnnotations, isAnnotationMode, setIsAnnotationMode } = useApp();
+    return (
+        <PDFViewerContent
+            pdfFile={pdfFile}
+            setPdfFile={setPdfFile}
+            annotations={annotations}
+            setAnnotations={setAnnotations}
+            isAnnotationMode={isAnnotationMode}
+            setIsAnnotationMode={setIsAnnotationMode}
+        />
+    );
 };
+
+
+

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { getStroke } from 'perfect-freehand';
 import { Eraser, Pen, Trash2, Undo } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useAppScale } from '../../utils/useAppScale';
 
 interface Point {
     x: number;
@@ -43,6 +44,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     const [size] = useState(4);
     const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
     const isLoaded = useRef(false);
+    const scale = useAppScale();
 
     // Load initial data
     useEffect(() => {
@@ -84,9 +86,13 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     const getSvgPoint = (e: React.PointerEvent): Point => {
         if (!svgRef.current) return { x: 0, y: 0 };
         const rect = svgRef.current.getBoundingClientRect();
+        // getBoundingClientRect returns SCREEN coordinates (scaled).
+        // We need to convert to LOGICAL coordinates by dividing by scale.
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
         return {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top,
+            x: screenX / scale.scale,
+            y: screenY / scale.scale,
             pressure: e.pressure,
         };
     };
@@ -174,6 +180,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                         {!simple && <div className="w-px h-4 bg-gray-300 mx-1" />}
 
                         <button
+                            type="button"
                             onClick={() => setTool('pen')}
                             className={clsx("p-1 rounded", tool === 'pen' ? "bg-blue-100 text-blue-600" : "text-gray-500 hover:bg-gray-100")}
                             title="قلم"
@@ -181,6 +188,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                             <Pen size={14} />
                         </button>
                         <button
+                            type="button"
                             onClick={() => setTool('eraser')}
                             className={clsx("p-1 rounded", tool === 'eraser' ? "bg-gray-200 text-gray-700" : "text-gray-500 hover:bg-gray-100")}
                             title="ممحاة"
@@ -190,10 +198,10 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
                         <div className="w-px h-4 bg-gray-300 mx-1" />
 
-                        <button onClick={handleUndo} className="p-1 text-gray-500 hover:bg-gray-100 rounded" title="تراجع">
+                        <button type="button" onClick={handleUndo} className="p-1 text-gray-500 hover:bg-gray-100 rounded" title="تراجع">
                             <Undo size={14} />
                         </button>
-                        <button onClick={handleClear} className="p-1 text-red-500 hover:bg-red-50 rounded" title="مسح">
+                        <button type="button" onClick={handleClear} className="p-1 text-red-500 hover:bg-red-50 rounded" title="مسح">
                             <Trash2 size={14} />
                         </button>
                     </div>
@@ -212,7 +220,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
                 <svg
                     ref={svgRef}
-                    className="w-full h-full touch-none cursor-crosshair"
+                    className="w-full h-full touch-none cursor-none"
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
@@ -229,3 +237,5 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         </div>
     );
 };
+
+

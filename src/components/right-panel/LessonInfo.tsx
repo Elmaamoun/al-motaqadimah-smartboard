@@ -41,161 +41,164 @@ export const LessonInfo: React.FC = () => {
     };
 
     return (
-        <div className="h-full flex flex-col gap-6 p-1 overflow-y-auto">
+        <div className="h-full flex flex-col p-1 overflow-hidden">
 
-            {/* Date */}
-            <div className="space-y-2">
-                <label className="flex items-center gap-2 text-slate-800 font-bold text-base mb-2">
-                    <Calendar className="text-primary-blue" size={20} />
-                    التاريخ
-                </label>
-                <div className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 font-bold text-lg text-gray-700 dir-ltr text-right">
-                    {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join(' / ')}
-                </div>
-            </div>
-
-            {/* Subject Dropdown */}
-            <div className="space-y-2">
-                <label className="flex items-center gap-2 text-slate-800 font-bold text-base mb-2">
-                    <BookOpen className="text-primary-blue" size={20} />
-                    المادة
-                </label>
-                <select
-                    value={selectedSubject || ''}
-                    onChange={(e) => setSelectedSubject(e.target.value as Subject)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-blue focus:border-transparent font-bold text-lg bg-white"
-                >
-                    <option value="" disabled>اختر مادة</option>
-                    {SUBJECTS.map((subject) => (
-                        <option key={subject} value={subject}>{subject}</option>
-                    ))}
-                </select>
-            </div>
-
-            {/* Lesson Title */}
-            <div className="space-y-2">
-                <div className="flex items-center justify-between">
+            {/* Top Sections Scrollable if needed, but we keep them fixed-ish for layout */}
+            <div className="flex flex-col gap-6 mb-6">
+                {/* Date */}
+                <div className="space-y-2">
                     <label className="flex items-center gap-2 text-slate-800 font-bold text-base mb-2">
-                        <FileText className="text-primary-blue" size={20} />
-                        موضوع الدرس
+                        <Calendar className="text-primary-blue" size={20} />
+                        التاريخ
                     </label>
-                    <div className="flex bg-gray-100 p-0.5 rounded-lg">
-                        <button
-                            onClick={() => setLessonSetup({ ...lessonSetup, lessonTitleMode: 'text' })}
-                            className={`px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1 transition-all ${lessonSetup.lessonTitleMode !== 'drawing' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            <Keyboard size={14} />
-                            كتابة
-                        </button>
-                        <button
-                            onClick={() => setLessonSetup({ ...lessonSetup, lessonTitleMode: 'drawing' })}
-                            className={`px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1 transition-all ${lessonSetup.lessonTitleMode === 'drawing' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            <Pen size={14} />
-                            رسم
-                        </button>
+                    <div className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 font-bold text-lg text-gray-700 dir-ltr text-right">
+                        {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join(' / ')}
                     </div>
-
                 </div>
 
-                <div className={lessonSetup.lessonTitleMode === 'drawing' ? "block" : "hidden"}>
-                    {/* Toolbar Toggle */}
-                    <div className="flex justify-end mb-1">
-                        <button
-                            onClick={() => setLessonTitleToolbar(!lessonTitleToolbar)}
-                            className="bg-gray-100 hover:bg-gray-200 text-slate-500 p-1 rounded transition-colors"
-                            title={lessonTitleToolbar ? "إخفاء الأدوات" : "إظهار الأدوات"}
-                        >
-                            <Wrench size={14} />
-                        </button>
-                    </div>
-
-                    <DrawingCanvas
-                        className="w-full"
-                        height={100}
-                        placeholder="ارسم موضوع الدرس..."
-                        simple={true}
-                        initialData={lessonSetup.lessonTitleDrawing}
-                        onUpdate={(data) => setLessonSetup({ ...lessonSetup, lessonTitleDrawing: data })}
-                        showToolbar={lessonTitleToolbar}
-                    />
+                {/* Subject Dropdown */}
+                <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-slate-800 font-bold text-base mb-2">
+                        <BookOpen className="text-primary-blue" size={20} />
+                        المادة
+                    </label>
+                    <select
+                        value={selectedSubject || ''}
+                        onChange={(e) => setSelectedSubject(e.target.value as Subject)}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-blue focus:border-transparent font-bold text-lg bg-white"
+                    >
+                        <option value="" disabled>اختر مادة</option>
+                        {SUBJECTS.map((subject) => (
+                            <option key={subject} value={subject}>{subject}</option>
+                        ))}
+                    </select>
                 </div>
 
-                <input
-                    type="text"
-                    value={lessonSetup.lessonTitle}
-                    onChange={(e) => setLessonSetup({ ...lessonSetup, lessonTitle: e.target.value })}
-                    placeholder="أدخل عنوان الدرس..."
-                    className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-blue focus:border-transparent font-bold text-lg ${lessonSetup.lessonTitleMode !== 'drawing' ? "block" : "hidden"}`}
-                />
-            </div>
-
-            {/* Haqiba */}
-            <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                    <div>
+                {/* Lesson Title */}
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
                         <label className="flex items-center gap-2 text-slate-800 font-bold text-base mb-2">
-                            <RotateCcw className="text-primary-blue" size={20} />
-                            الحقبنة
+                            <FileText className="text-primary-blue" size={20} />
+                            موضوع الدرس
                         </label>
-                        <span className="text-xs text-slate-400 mr-8 block">ماذا تعلمنا سابقاً؟</span>
-                    </div>
-                    <div className="flex bg-gray-100 p-0.5 rounded-lg">
-                        <button
-                            onClick={() => setIsHaqibaDrawing(false)}
-                            className={`px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1 transition-all ${!isHaqibaDrawing ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            <Keyboard size={14} />
-                            كتابة
-                        </button>
-                        <button
-                            onClick={() => setIsHaqibaDrawing(true)}
-                            className={`px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1 transition-all ${isHaqibaDrawing ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            <Pen size={14} />
-                            رسم
-                        </button>
-                    </div>
-                </div>
+                        <div className="flex bg-gray-100 p-0.5 rounded-lg">
+                            <button
+                                onClick={() => setLessonSetup({ ...lessonSetup, lessonTitleMode: 'text' })}
+                                className={`px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1 transition-all ${lessonSetup.lessonTitleMode !== 'drawing' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                <Keyboard size={14} />
+                                كتابة
+                            </button>
+                            <button
+                                onClick={() => setLessonSetup({ ...lessonSetup, lessonTitleMode: 'drawing' })}
+                                className={`px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1 transition-all ${lessonSetup.lessonTitleMode === 'drawing' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                <Pen size={14} />
+                                قلم
+                            </button>
+                        </div>
 
-                {/* Persistent Toggle for Haqiba */}
-                <div className={isHaqibaDrawing ? "block" : "hidden"}>
-                    {/* Toolbar Toggle */}
-                    <div className="flex justify-end mb-1">
-                        <button
-                            onClick={() => setHaqibaToolbar(!haqibaToolbar)}
-                            className="bg-gray-100 hover:bg-gray-200 text-slate-500 p-1 rounded transition-colors"
-                            title={haqibaToolbar ? "إخفاء الأدوات" : "إظهار الأدوات"}
-                        >
-                            <Wrench size={14} />
-                        </button>
                     </div>
 
-                    <DrawingCanvas
-                        className="w-full"
-                        height={120}
-                        placeholder="ارسم هنا..."
-                        simple={true}
-                        showToolbar={haqibaToolbar}
+                    <div className={lessonSetup.lessonTitleMode === 'drawing' ? "block" : "hidden"}>
+                        {/* Toolbar Toggle */}
+                        <div className="flex justify-end mb-1">
+                            <button
+                                onClick={() => setLessonTitleToolbar(!lessonTitleToolbar)}
+                                className="bg-gray-100 hover:bg-gray-200 text-slate-500 p-1 rounded transition-colors"
+                                title={lessonTitleToolbar ? "إخفاء الأدوات" : "إظهار الأدوات"}
+                            >
+                                <Wrench size={14} />
+                            </button>
+                        </div>
+
+                        <DrawingCanvas
+                            className="w-full"
+                            height={80}
+                            placeholder="اكتب موضوع الدرس..."
+                            simple={true}
+                            initialData={lessonSetup.lessonTitleDrawing}
+                            onUpdate={(data) => setLessonSetup({ ...lessonSetup, lessonTitleDrawing: data })}
+                            showToolbar={lessonTitleToolbar}
+                        />
+                    </div>
+
+                    <input
+                        type="text"
+                        value={lessonSetup.lessonTitle}
+                        onChange={(e) => setLessonSetup({ ...lessonSetup, lessonTitle: e.target.value })}
+                        placeholder="أدخل عنوان الدرس..."
+                        className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-blue focus:border-transparent font-bold text-lg ${lessonSetup.lessonTitleMode !== 'drawing' ? "block" : "hidden"}`}
                     />
                 </div>
-                <textarea
-                    value={haqiba}
-                    onChange={(e) => setHaqiba(e.target.value)}
-                    placeholder="ماذا تعلمنا سابقاً؟"
-                    rows={3}
-                    className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-blue focus:border-transparent font-bold text-lg resize-none ${!isHaqibaDrawing ? "block" : "hidden"}`}
-                />
+
+                {/* Haqiba */}
+                <div className="space-y-2 text-right">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <label className="flex items-center gap-2 text-slate-800 font-bold text-base mb-2">
+                                <RotateCcw className="text-primary-blue" size={20} />
+                                الحقبنة
+                            </label>
+                            <span className="text-xs text-slate-400 mr-8 block">ماذا تعلمنا سابقاً؟</span>
+                        </div>
+                        <div className="flex bg-gray-100 p-0.5 rounded-lg">
+                            <button
+                                onClick={() => setIsHaqibaDrawing(false)}
+                                className={`px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1 transition-all ${!isHaqibaDrawing ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                <Keyboard size={14} />
+                                كتابة
+                            </button>
+                            <button
+                                onClick={() => setIsHaqibaDrawing(true)}
+                                className={`px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1 transition-all ${isHaqibaDrawing ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                <Pen size={14} />
+                                قلم
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Persistent Toggle for Haqiba */}
+                    <div className={isHaqibaDrawing ? "block" : "hidden"}>
+                        {/* Toolbar Toggle */}
+                        <div className="flex justify-end mb-1">
+                            <button
+                                onClick={() => setHaqibaToolbar(!haqibaToolbar)}
+                                className="bg-gray-100 hover:bg-gray-200 text-slate-500 p-1 rounded transition-colors"
+                                title={haqibaToolbar ? "إخفاء الأدوات" : "إظهار الأدوات"}
+                            >
+                                <Wrench size={14} />
+                            </button>
+                        </div>
+
+                        <DrawingCanvas
+                            className="w-full"
+                            height={80}
+                            placeholder="اكتب هنا..."
+                            simple={true}
+                            showToolbar={haqibaToolbar}
+                        />
+                    </div>
+                    <textarea
+                        value={haqiba}
+                        onChange={(e) => setHaqiba(e.target.value)}
+                        placeholder="ماذا تعلمنا سابقاً؟"
+                        rows={1}
+                        className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-blue focus:border-transparent font-bold text-lg resize-none ${!isHaqibaDrawing ? "block" : "hidden"}`}
+                    />
+                </div>
             </div>
 
-            {/* Learning Outcomes - Fixed layout */}
-            <div className="space-y-2 flex flex-col">
+            {/* Learning Outcomes - Scrollable section */}
+            <div className="flex-1 flex flex-col min-h-0">
                 <label className="flex items-center gap-2 text-slate-800 font-bold text-base mb-2 shrink-0">
                     <Target className="text-primary-blue" size={20} />
                     نواتج التعلم
                 </label>
 
-                <div className="space-y-3 pr-1">
+                <div className="flex-1 overflow-y-auto space-y-3 pr-1 scrollbar-slim-neutral">
                     {outcomes.map((outcome, index) => (
                         <div key={index} className="flex flex-col gap-2 p-1 border border-transparent hover:border-gray-200 rounded-lg transition-colors max-w-full overflow-hidden">
                             <div className="flex items-center gap-2">
@@ -241,8 +244,8 @@ export const LessonInfo: React.FC = () => {
                             <div className={`w-full ${outcomeModes[index] ? "block" : "hidden"}`}>
                                 <DrawingCanvas
                                     className="w-full"
-                                    height={100}
-                                    placeholder="ارسم هنا..."
+                                    height={80}
+                                    placeholder="اكتب هنا..."
                                     simple={true}
                                     showToolbar={outcomeToolbars[index] !== false} // Default true
                                 />

@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Clock, Maximize, Minimize, Volume2, VolumeX, LogOut, X, Settings, Play, Pause, RotateCcw } from 'lucide-react';
+import { Clock, Maximize, Minimize, Volume2, VolumeX, LogOut, X, Settings, Play, Pause, RotateCcw, Lock, Unlock } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import clsx from 'clsx';
 
 export const TopBar: React.FC = () => {
-    const { endSession, isSoundEnabled, toggleSound } = useApp();
+    const { endSession, isSoundEnabled, toggleSound, isFullscreenMode, toggleFullscreenMode, isEditLocked, toggleEditLock } = useApp();
     const [currentTime, setCurrentTime] = useState(new Date());
-    const [isFullscreen, setIsFullscreen] = useState(false);
 
     // Timer State
     const [initialSeconds, setInitialSeconds] = useState<number>(40 * 60);
@@ -29,17 +28,7 @@ export const TopBar: React.FC = () => {
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-
-        // Fullscreen listener
-        const handleFullscreenChange = () => {
-            setIsFullscreen(!!document.fullscreenElement);
-        };
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-
-        return () => {
-            clearInterval(timer);
-            document.removeEventListener('fullscreenchange', handleFullscreenChange);
-        };
+        return () => clearInterval(timer);
     }, []);
 
     const initAudio = () => {
@@ -153,15 +142,54 @@ export const TopBar: React.FC = () => {
         hasPlayedFiveMinAlert.current = false;
     };
 
+    // Sync fullscreen state with native browser state
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            const isNativeFullscreen = !!(
+                document.fullscreenElement ||
+                (document as any).webkitFullscreenElement ||
+                (document as any).msFullscreenElement
+            );
+
+            // If native state differs from context state, sync it
+            if (isNativeFullscreen !== isFullscreenMode) {
+                toggleFullscreenMode();
+            }
+        };
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+        };
+    }, [isFullscreenMode, toggleFullscreenMode]);
+
     const toggleFullscreen = async () => {
         try {
-            if (!document.fullscreenElement) {
-                await document.documentElement.requestFullscreen();
+            if (!document.fullscreenElement &&
+                !(document as any).webkitFullscreenElement &&
+                !(document as any).msFullscreenElement) {
+
+                const docEl = document.documentElement as any;
+                if (docEl.requestFullscreen) await docEl.requestFullscreen();
+                else if (docEl.webkitRequestFullscreen) await docEl.webkitRequestFullscreen();
+                else if (docEl.msRequestFullscreen) await docEl.msRequestFullscreen();
+
             } else {
-                await document.exitFullscreen();
+                if (document.exitFullscreen) await document.exitFullscreen();
+                else if ((document as any).webkitExitFullscreen) await (document as any).webkitExitFullscreen();
+                else if ((document as any).msExitFullscreen) await (document as any).msExitFullscreen();
             }
-        } catch (err) {
-            console.error("Error toggling fullscreen:", err);
+        } catch (e) {
+            console.warn("Fullscreen toggle failed", e);
+            // Even if native fails, we might want to toggle the UI state if it depends on it
+            // But usually we rely on the event listener. 
+            // Only force toggle if we're sure it failed to trigger the event?
+            // Safer to just let the event listener handle the state update.
         }
     };
 
@@ -310,9 +338,19 @@ export const TopBar: React.FC = () => {
                     <button onClick={toggleSound} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                         {!isSoundEnabled ? <VolumeX size={20} /> : <Volume2 size={20} />}
                     </button>
-
-                    <button onClick={toggleFullscreen} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                        {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+                    <button
+                        onClick={toggleFullscreen}
+                        className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white"
+                        title={isFullscreenMode ? 'إنهاء ملء الشاشة' : 'ملء الشاشة'}
+                    >
+                        {isFullscreenMode ? <Minimize size={22} /> : <Maximize size={22} />}
+                    </button>
+                    <button
+                        onClick={toggleEditLock}
+                        className={clsx("p-2 hover:bg-white/10 rounded-lg transition-colors", isEditLocked ? "text-white/60" : "text-white")}
+                        title={isEditLocked ? 'فتح التعديل' : 'قفل التعديل'}
+                    >
+                        {isEditLocked ? <Lock size={20} /> : <Unlock size={20} />}
                     </button>
                 </div>
             </div>

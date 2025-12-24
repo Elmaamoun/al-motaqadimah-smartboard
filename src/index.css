@@ -5,114 +5,224 @@
 @tailwind utilities;
 
 @layer base {
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+  }
+
   html {
     font-family: 'Cairo', sans-serif;
     direction: rtl;
+    /*
+       FIXED BASE:
+       Standardized to 15px as requested.
+       No viewport-based clamping.
+    */
+    font-size: 15px !important;
     @apply text-gray-900;
   }
 
   body {
-    @apply bg-brand-gray text-lg font-semibold;
+    margin: 0;
+    overflow: hidden;
+    @apply bg-brand-gray text-base font-medium;
   }
 
-  input,
-  select,
-  textarea,
-  button {
-    @apply font-medium;
+  #root {
+    height: 100dvh;
+    width: 100vw;
+    overflow: hidden;
+  }
+}
+
+/* Scaling Wrapper used in App.tsx */
+.app-scale-wrapper {
+  transform: scale(var(--ui-scale, 1));
+  transform-origin: top left;
+  /*
+     Adjust width/height to compensate for the scale transform
+     to ensure the app still fills the viewport effectively.
+  */
+  width: calc(100vw * var(--ui-scale-inv, 1));
+  height: calc(100dvh * var(--ui-scale-inv, 1));
+  overflow: hidden;
+  /* Use absolute positioning to anchor at top-left regardless of RTL */
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+
+/* Custom Scrollbars - Preserved */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #E2E8F0;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2B899D;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1F6472;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2B899D #E2E8F0;
+}
+
+/* Slim Neutral Scrollbar for PDF Viewer */
+.scrollbar-slim-neutral::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-slim-neutral::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-slim-neutral::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  /* slate-300 */
+  border-radius: 3px;
+}
+
+.scrollbar-slim-neutral::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+  /* slate-400 */
+  border-radius: 3px;
+}
+
+/* Firefox */
+.scrollbar-slim-neutral {
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E1 transparent;
+}
+
+/* Safe CSS Fullscreen Mode - Works inside scale wrapper */
+.fullscreen-mode {
+  /* Use absolute positioning relative to the scale wrapper, not fixed to viewport */
+  position: absolute;
+  inset: 0;
+  z-index: 9999;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #f5f7fa;
+  /* Match bg-gray-50 */
+}
+
+/* Animations */
+@keyframes pop-success {
+  0% {
+    transform: scale(1);
+    opacity: 1;
   }
 
-  /* Custom Scrollbars */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  40% {
+    transform: scale(1.08);
+    opacity: 1;
   }
 
-  ::-webkit-scrollbar-track {
-    background: #E2E8F0;
-    border-radius: 10px;
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-pop {
+  animation: pop-success 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  will-change: transform;
+}
+
+@keyframes shake-error {
+
+  0%,
+  100% {
+    transform: translateX(0);
   }
 
-  ::-webkit-scrollbar-thumb {
-    background: #2B899D;
-    border-radius: 10px;
+  20% {
+    transform: translateX(-5px);
   }
 
-  ::-webkit-scrollbar-thumb:hover {
-    background: #1F6472;
+  40% {
+    transform: translateX(5px);
   }
 
-  /* Firefox */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: #2B899D #E2E8F0;
+  60% {
+    transform: translateX(-5px);
   }
 
-  /* Slim Neutral Scrollbar for PDF Viewer */
-  .scrollbar-slim-neutral::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-shake {
+  animation: shake-error 0.4s cubic-bezier(.36, .07, .19, .97) both;
+  will-change: transform;
+}
+
+/* Message Animations - GPU Accelerated for Smooth Performance */
+@keyframes msg-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(-20px);
   }
 
-  .scrollbar-slim-neutral::-webkit-scrollbar-track {
-    background: transparent;
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes msg-exit {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 
-  .scrollbar-slim-neutral::-webkit-scrollbar-thumb {
-    background: #CBD5E1;
-    /* slate-300 */
-    border-radius: 3px;
+  100% {
+    opacity: 0;
+    transform: scale(0.9) translateY(-10px);
   }
+}
 
-  .scrollbar-slim-neutral::-webkit-scrollbar-thumb:hover {
-    background: #94A3B8;
-    /* slate-400 */
-  }
+.animate-msg-in {
+  animation: msg-enter 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  will-change: transform, opacity;
+}
 
-  /* Firefox */
-  .scrollbar-slim-neutral {
-    scrollbar-width: thin;
-    scrollbar-color: #CBD5E1 transparent;
-  }
+.animate-msg-out {
+  animation: msg-exit 0.25s ease-in forwards;
+  will-change: transform, opacity;
+}
 
-  /* Base layout – large smartboard screens (default) */
-  .smartboard-left {
-    flex-basis: 260px;
-  }
+/* Select Dropdown Styling - Fix for oversized options */
+select {
+  font-size: 0.95rem !important;
+}
 
-  .smartboard-right {
-    flex-basis: 380px;
-  }
+select option {
+  font-size: 0.9rem !important;
+  padding: 0.4rem 0.6rem !important;
+  line-height: 1.3 !important;
+  max-height: 2.5rem !important;
+}
 
-  .smartboard-center {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  /* Laptop / mid screens: width < 1440px */
-  @media (max-width: 1440px) {
-    .smartboard-left {
-      flex-basis: 230px;
-    }
-
-    .smartboard-right {
-      flex-basis: 300px;
-      /* smaller lesson panel */
-    }
-
-    .smartboard-center {
-      flex: 1 1 auto;
-    }
-  }
-
-  /* Smaller screens: width < 1200px */
-  @media (max-width: 1200px) {
-    .smartboard-left {
-      flex-basis: 220px;
-    }
-
-    .smartboard-right {
-      flex-basis: 280px;
-    }
-  }
+/* Webkit browsers - limit dropdown menu height */
+select:focus {
+  max-height: 400px;
 }
