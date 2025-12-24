@@ -22,7 +22,6 @@ export const SetupScreen: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [showAboutModal, setShowAboutModal] = useState(false);
     const [errors, setErrors] = useState<Record<string, boolean>>({});
-    const [generalError, setGeneralError] = useState<string | null>(null);
 
     // Dynamic Filtering Logic
     const availableGrades = React.useMemo(() => {
@@ -128,13 +127,11 @@ export const SetupScreen: React.FC = () => {
 
         if (hasError) {
             setErrors(newErrors);
-            setGeneralError("يرجى إكمال البيانات قبل بدء الحصة");
             return;
         }
 
         const success = loadClassStudents(lessonSetup.stage, lessonSetup.grade, lessonSetup.className, lessonSetup.system);
         if (!success) {
-            setGeneralError("لا توجد قائمة طلاب لهذا الاختيار (تأكد من اختيار النظام والصف والفصل الصحيح)");
             return;
         }
 
