@@ -17,11 +17,11 @@
     font-family: 'Cairo', sans-serif;
     direction: rtl;
     /*
-       SMARTBOARD OPTIMIZED:
-       Reduced from 15px to 10px for better smartboard scaling.
-       This scales everything proportionally without clipping.
+       REVERTED: Back to original 15px
+       User controls zoom via browser (Ctrl +/-)
+       This is standard practice for large displays
     */
-    font-size: 10px !important;
+    font-size: 15px !important;
     @apply text-gray-900;
   }
 
