@@ -28,6 +28,9 @@
   body {
     margin: 0;
     overflow: hidden;
+    /* Optimized zoom for smartboard - tested at 0.65-0.67 range */
+    /* This brings button heights to ~33px (desktop standard) */
+    zoom: 0.67;
     @apply bg-brand-gray text-base font-medium;
   }
 
