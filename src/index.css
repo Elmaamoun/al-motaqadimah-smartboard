@@ -17,20 +17,17 @@
     font-family: 'Cairo', sans-serif;
     direction: rtl;
     /*
-       FIXED BASE:
-       Standardized to 15px as requested.
-       No viewport-based clamping.
+       SMARTBOARD OPTIMIZED:
+       Reduced from 15px to 10px for better smartboard scaling.
+       This scales everything proportionally without clipping.
     */
-    font-size: 15px !important;
+    font-size: 10px !important;
     @apply text-gray-900;
   }
 
   body {
     margin: 0;
     overflow: hidden;
-    /* Optimized zoom for smartboard - tested at 0.65-0.67 range */
-    /* This brings button heights to ~33px (desktop standard) */
-    zoom: 0.67;
     @apply bg-brand-gray text-base font-medium;
   }
 
