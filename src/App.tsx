@@ -16,13 +16,7 @@ const AppContent: React.FC = () => {
   );
 };
 
-import { mountScaler } from './utils/appScale';
-
 function App() {
-  React.useEffect(() => {
-    return mountScaler();
-  }, []);
-
   return (
     <AppProvider>
       <div className="app-scale-wrapper">

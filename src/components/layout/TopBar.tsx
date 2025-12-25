@@ -142,32 +142,7 @@ export const TopBar: React.FC = () => {
         hasPlayedFiveMinAlert.current = false;
     };
 
-    // Sync fullscreen state with native browser state
-    useEffect(() => {
-        const handleFullscreenChange = () => {
-            const isNativeFullscreen = !!(
-                document.fullscreenElement ||
-                (document as any).webkitFullscreenElement ||
-                (document as any).msFullscreenElement
-            );
-
-            // If native state differs from context state, sync it
-            if (isNativeFullscreen !== isFullscreenMode) {
-                toggleFullscreenMode();
-            }
-        };
-
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-        document.addEventListener('msfullscreenchange', handleFullscreenChange);
-
-        return () => {
-            document.removeEventListener('fullscreenchange', handleFullscreenChange);
-            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-            document.removeEventListener('msfullscreenchange', handleFullscreenChange);
-        };
-    }, [isFullscreenMode, toggleFullscreenMode]);
-
+    // Simplified fullscreen toggle - no sync needed
     const toggleFullscreen = async () => {
         try {
             if (!document.fullscreenElement &&
@@ -179,17 +154,19 @@ export const TopBar: React.FC = () => {
                 else if (docEl.webkitRequestFullscreen) await docEl.webkitRequestFullscreen();
                 else if (docEl.msRequestFullscreen) await docEl.msRequestFullscreen();
 
+                // Update state after entering fullscreen
+                toggleFullscreenMode();
+
             } else {
                 if (document.exitFullscreen) await document.exitFullscreen();
                 else if ((document as any).webkitExitFullscreen) await (document as any).webkitExitFullscreen();
                 else if ((document as any).msExitFullscreen) await (document as any).msExitFullscreen();
+
+                // Update state after exiting fullscreen
+                toggleFullscreenMode();
             }
         } catch (e) {
-            console.warn("Fullscreen toggle failed", e);
-            // Even if native fails, we might want to toggle the UI state if it depends on it
-            // But usually we rely on the event listener. 
-            // Only force toggle if we're sure it failed to trigger the event?
-            // Safer to just let the event listener handle the state update.
+            console.error("Fullscreen toggle failed:", e);
         }
     };
 

@@ -38,21 +38,12 @@
   }
 }
 
-/* Scaling Wrapper used in App.tsx */
+/* App Wrapper - Simplified (removed scaling) */
 .app-scale-wrapper {
-  transform: scale(var(--ui-scale, 1));
-  transform-origin: top left;
-  /*
-     Adjust width/height to compensate for the scale transform
-     to ensure the app still fills the viewport effectively.
-  */
-  width: calc(100vw * var(--ui-scale-inv, 1));
-  height: calc(100dvh * var(--ui-scale-inv, 1));
+  width: 100%;
+  height: 100%;
   overflow: hidden;
-  /* Use absolute positioning to anchor at top-left regardless of RTL */
-  position: absolute;
-  left: 0;
-  top: 0;
+  position: relative;
 }
 
 
