@@ -53,14 +53,18 @@ export default function ResizableTriPane({
         }
     }, [isEditLocked, leftW]);
 
-    const startDrag = (side: "left" | "right", e: React.MouseEvent) => {
+    const startDrag = (side: "left" | "right", e: React.MouseEvent | React.TouchEvent) => {
         e.preventDefault();
-        const startX = e.clientX;
+
+        // Get initial X position from either mouse or touch
+        const startX = 'touches' in e ? e.touches[0].clientX : e.clientX;
         const startLeft = leftW;
         const startRight = rightW;
 
-        const onMove = (ev: MouseEvent) => {
-            const dx = ev.clientX - startX;
+        const onMove = (ev: MouseEvent | TouchEvent) => {
+            // Get current X from either mouse or touch
+            const currentX = 'touches' in ev ? ev.touches[0].clientX : ev.clientX;
+            const dx = currentX - startX;
             const el = rootRef.current;
             const vw = el?.clientWidth ?? window.innerWidth;
 
@@ -119,16 +123,20 @@ export default function ResizableTriPane({
         };
 
         const onUp = () => {
-            window.removeEventListener("mousemove", onMove);
+            window.removeEventListener("mousemove", onMove as any);
             window.removeEventListener("mouseup", onUp);
+            window.removeEventListener("touchmove", onMove as any);
+            window.removeEventListener("touchend", onUp);
             document.body.style.cursor = "";
             document.body.style.userSelect = "";
         };
 
         document.body.style.cursor = "col-resize";
         document.body.style.userSelect = "none";
-        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mousemove", onMove as any);
         window.addEventListener("mouseup", onUp);
+        window.addEventListener("touchmove", onMove as any, { passive: false });
+        window.addEventListener("touchend", onUp);
     };
 
     return (
@@ -152,6 +160,7 @@ export default function ResizableTriPane({
 
                 <div
                     onMouseDown={(e) => startDrag("left", e)}
+                    onTouchStart={(e) => startDrag("left", e)}
                     className="h-full w-[8px] cursor-col-resize bg-primary-blue/20 hover:bg-primary-blue/40 active:bg-primary-blue/60 transition-colors"
                     title="اسحب للتوسيع/التضييق"
                 />
@@ -160,6 +169,7 @@ export default function ResizableTriPane({
 
                 <div
                     onMouseDown={(e) => startDrag("right", e)}
+                    onTouchStart={(e) => startDrag("right", e)}
                     className="h-full w-[8px] cursor-col-resize bg-primary-blue/20 hover:bg-primary-blue/40 active:bg-primary-blue/60 transition-colors"
                     title="اسحب للتوسيع/التضييق"
                 />

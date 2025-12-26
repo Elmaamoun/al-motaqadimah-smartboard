@@ -46,6 +46,13 @@
   position: relative;
 }
 
+/* Ensure touch events work on smartboards */
+.touch-none {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 
 /* Custom Scrollbars - Preserved */
 ::-webkit-scrollbar {
