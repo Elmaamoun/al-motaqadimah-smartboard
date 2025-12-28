@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { getStroke } from 'perfect-freehand';
 import { Eraser, Pen, Trash2, Undo } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useAppScale } from '../../utils/useAppScale';
 
 interface Point {
     x: number;
@@ -44,7 +43,6 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     const [size] = useState(4);
     const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
     const isLoaded = useRef(false);
-    const scale = useAppScale();
 
     // Load initial data
     useEffect(() => {
@@ -86,13 +84,15 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     const getSvgPoint = (e: React.PointerEvent): Point => {
         if (!svgRef.current) return { x: 0, y: 0 };
         const rect = svgRef.current.getBoundingClientRect();
-        // getBoundingClientRect returns SCREEN coordinates (scaled).
-        // We need to convert to LOGICAL coordinates by dividing by scale.
-        const screenX = e.clientX - rect.left;
-        const screenY = e.clientY - rect.top;
+
+        // Direct coordinate mapping without scaling
+        // This works correctly on Android smartboards
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
         return {
-            x: screenX / scale.scale,
-            y: screenY / scale.scale,
+            x,
+            y,
             pressure: e.pressure,
         };
     };

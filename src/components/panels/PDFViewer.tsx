@@ -143,14 +143,15 @@ const PDFViewerContent: React.FC<PDFViewerContentProps> = React.memo(({
 
     // --- Annotation Logic ---
 
-    const { scale: appScale } = useAppScale();
-
     const getSvgPoint = (e: React.PointerEvent): Point => {
         if (!svgRef.current) return { x: 0, y: 0 };
         const rect = svgRef.current.getBoundingClientRect();
+
+        // Direct coordinate mapping without scaling
+        // This works correctly on Android smartboards
         return {
-            x: (e.clientX - rect.left) / appScale, // Adjust for scale
-            y: (e.clientY - rect.top) / appScale,
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top,
             pressure: e.pressure,
         };
     };
