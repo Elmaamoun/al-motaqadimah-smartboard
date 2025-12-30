@@ -138,19 +138,37 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     const renderStroke = (stroke: Stroke) => {
         const outline = getStroke(stroke.points, {
             size: stroke.size,
-            thinning: 0.5,
-            smoothing: 0.5,
-            streamline: 0.5,
+            thinning: 0.3,      // Less thinning for consistent width
+            smoothing: 0.8,     // Higher smoothing for smoother curves
+            streamline: 0.7,    // Higher streamline to reduce jitter
+            easing: (t) => t,   // Linear easing
+            start: {
+                taper: 0,
+                cap: true,
+            },
+            end: {
+                taper: 0,
+                cap: true,
+            },
         });
 
-        const pathData = outline.length > 0
-            ? `M ${outline[0][0]} ${outline[0][1]} Q ${outline.slice(1).map(p => `${p[0]} ${p[1]}`).join(' ')} Z`
-            : '';
+        if (outline.length < 2) return null;
+
+        // Generate smooth SVG path using quadratic bezier curves
+        const pathData = outline.reduce((acc, point, i, arr) => {
+            if (i === 0) {
+                return `M ${point[0].toFixed(2)} ${point[1].toFixed(2)}`;
+            }
+            // Use line to for better performance with many points
+            return `${acc} L ${point[0].toFixed(2)} ${point[1].toFixed(2)}`;
+        }, '') + ' Z';
 
         return (
             <path
                 d={pathData}
                 fill={stroke.color}
+                strokeLinejoin="round"
+                strokeLinecap="round"
             />
         );
     };
