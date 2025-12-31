@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, Upload, Pen, Eraser, Undo, Monitor, FileText } from 'lucide-react';
 import { useApp, type Stroke, type Point } from '../../context/AppContext';
-import { getStroke } from 'perfect-freehand';
 import clsx from 'clsx';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';

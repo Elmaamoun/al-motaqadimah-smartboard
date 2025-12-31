@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { getStroke } from 'perfect-freehand';
 import { Eraser, Pen, Trash2, Undo } from 'lucide-react';
 import { clsx } from 'clsx';
 
