@@ -21,13 +21,13 @@ export default function ResizableTriPane({
     // Get edit lock state for dynamic width
     const { isEditLocked } = useApp();
 
-    // Default widths (WIDER than before)
-    const defaults = useMemo(() => ({ left: 380, right: 400 }), []);
+    // Default widths (Reduced for smaller UI)
+    const defaults = useMemo(() => ({ left: 300, right: 320 }), []);
     const [leftW, setLeftW] = useState(defaults.left);
     const [rightW, setRightW] = useState(defaults.right);
 
     // Dynamic minimum width based on edit lock state
-    const minLeftWidth = !isEditLocked ? 420 : 280;
+    const minLeftWidth = !isEditLocked ? 340 : 240;
 
     useEffect(() => {
         try {
@@ -48,8 +48,8 @@ export default function ResizableTriPane({
 
     // Auto-expand left panel when edit lock is opened
     useEffect(() => {
-        if (!isEditLocked && leftW < 420) {
-            setLeftW(420); // Expand to show full group names
+        if (!isEditLocked && leftW < 340) {
+            setLeftW(340); // Expand to show full group names
         }
     }, [isEditLocked, leftW]);
 
@@ -69,8 +69,8 @@ export default function ResizableTriPane({
             const vw = el?.clientWidth ?? window.innerWidth;
 
             // Limits
-            const minSide = 260;
-            const maxSide = Math.max(360, Math.floor(vw * 0.36)); // prevent eating center
+            const minSide = 220;
+            const maxSide = Math.max(300, Math.floor(vw * 0.30)); // prevent eating center
             // const minCenter = 520;
 
             if (side === "left") {
@@ -152,7 +152,7 @@ export default function ResizableTriPane({
             <div
                 className="h-full w-full grid"
                 style={{
-                    gridTemplateColumns: `${leftW}px 8px minmax(520px, 1fr) 8px ${rightW}px`,
+                    gridTemplateColumns: `${leftW}px 6px minmax(480px, 1fr) 6px ${rightW}px`,
                     transition: 'grid-template-columns 0.3s ease-out',
                 }}
             >
@@ -161,7 +161,7 @@ export default function ResizableTriPane({
                 <div
                     onMouseDown={(e) => startDrag("left", e)}
                     onTouchStart={(e) => startDrag("left", e)}
-                    className="h-full w-[8px] cursor-col-resize bg-primary-blue/20 hover:bg-primary-blue/40 active:bg-primary-blue/60 transition-colors"
+                    className="h-full w-[6px] cursor-col-resize bg-primary-blue/20 hover:bg-primary-blue/40 active:bg-primary-blue/60 transition-colors"
                     title="اسحب للتوسيع/التضييق"
                 />
 
@@ -170,7 +170,7 @@ export default function ResizableTriPane({
                 <div
                     onMouseDown={(e) => startDrag("right", e)}
                     onTouchStart={(e) => startDrag("right", e)}
-                    className="h-full w-[8px] cursor-col-resize bg-primary-blue/20 hover:bg-primary-blue/40 active:bg-primary-blue/60 transition-colors"
+                    className="h-full w-[6px] cursor-col-resize bg-primary-blue/20 hover:bg-primary-blue/40 active:bg-primary-blue/60 transition-colors"
                     title="اسحب للتوسيع/التضييق"
                 />
 

@@ -126,9 +126,8 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     };
 
     const handleClear = () => {
-        if (window.confirm('مسح الرسم؟')) {
-            setStrokes([]);
-        }
+        // Delete directly without confirmation
+        setStrokes([]);
     };
 
     const handleUndo = () => {
@@ -136,39 +135,34 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     };
 
     const renderStroke = (stroke: Stroke) => {
-        const outline = getStroke(stroke.points, {
-            size: stroke.size,
-            thinning: 0.3,      // Less thinning for consistent width
-            smoothing: 0.8,     // Higher smoothing for smoother curves
-            streamline: 0.7,    // Higher streamline to reduce jitter
-            easing: (t) => t,   // Linear easing
-            start: {
-                taper: 0,
-                cap: true,
-            },
-            end: {
-                taper: 0,
-                cap: true,
-            },
-        });
+        if (stroke.points.length < 2) return null;
 
-        if (outline.length < 2) return null;
+        const points = stroke.points;
 
-        // Generate smooth SVG path using quadratic bezier curves
-        const pathData = outline.reduce((acc, point, i, arr) => {
-            if (i === 0) {
-                return `M ${point[0].toFixed(2)} ${point[1].toFixed(2)}`;
-            }
-            // Use line to for better performance with many points
-            return `${acc} L ${point[0].toFixed(2)} ${point[1].toFixed(2)}`;
-        }, '') + ' Z';
+        // Build smooth path using quadratic bezier curves
+        let pathData = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+
+        for (let i = 1; i < points.length - 1; i++) {
+            const current = points[i];
+            const next = points[i + 1];
+            const midX = (current.x + next.x) / 2;
+            const midY = (current.y + next.y) / 2;
+            pathData += ` Q ${current.x.toFixed(1)} ${current.y.toFixed(1)} ${midX.toFixed(1)} ${midY.toFixed(1)}`;
+        }
+
+        if (points.length > 1) {
+            const last = points[points.length - 1];
+            pathData += ` L ${last.x.toFixed(1)} ${last.y.toFixed(1)}`;
+        }
 
         return (
             <path
                 d={pathData}
-                fill={stroke.color}
-                strokeLinejoin="round"
+                fill="none"
+                stroke={stroke.color}
+                strokeWidth={stroke.size}
                 strokeLinecap="round"
+                strokeLinejoin="round"
             />
         );
     };

@@ -180,9 +180,9 @@ export const ParticipationManager: React.FC = () => {
                                 width={windowWidth}
                                 height={windowHeight}
                                 recycle={false}
-                                numberOfPieces={150}
-                                gravity={0.3}
-                                colors={['#2B899D', '#8EC63F', '#FFD700', '#FFFFFF']}
+                                numberOfPieces={400}
+                                gravity={0.2}
+                                colors={['#2B899D', '#8EC63F', '#FFD700', '#FFFFFF', '#FF6B6B', '#4ECDC4']}
                             />
                         </div>
                     )}

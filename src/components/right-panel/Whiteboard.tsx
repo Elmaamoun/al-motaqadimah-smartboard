@@ -25,8 +25,9 @@ export const Whiteboard: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(0);
     const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
     const [color, setColor] = useState('#000000');
-    const [size] = useState(8); // Increased from 4 to 8 for thicker lines
+    const [size] = useState(4); // Standard pen thickness
     const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
+    const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
 
     const svgRef = useRef<SVGSVGElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -70,8 +71,11 @@ export const Whiteboard: React.FC = () => {
     };
 
     const handlePointerMove = (e: React.PointerEvent) => {
-        if (!currentStroke) return;
         const point = getSvgPoint(e);
+        // Always update cursor position for eraser circle
+        setCursorPos({ x: point.x, y: point.y });
+
+        if (!currentStroke) return;
         setCurrentStroke({
             ...currentStroke,
             points: [...currentStroke.points, point],
@@ -97,9 +101,8 @@ export const Whiteboard: React.FC = () => {
     };
 
     const handleClearPage = () => {
-        if (window.confirm('هل أنت متأكد من مسح هذه الصفحة؟')) {
-            updatePage([], []);
-        }
+        // Delete directly without confirmation
+        updatePage([], []);
     };
 
     const addNewPage = () => {
@@ -123,33 +126,38 @@ export const Whiteboard: React.FC = () => {
         }
     };
 
-    // Helper to render a stroke path
+    // Smooth bezier curve rendering for natural drawing
     const renderStroke = (stroke: Stroke) => {
-        const outline = getStroke(stroke.points, {
-            size: stroke.size,
-            thinning: 0.3,
-            smoothing: 0.8,
-            streamline: 0.7,
-            easing: (t) => t,
-            start: { taper: 0, cap: true },
-            end: { taper: 0, cap: true },
-        });
+        if (stroke.points.length < 2) return null;
 
-        if (outline.length < 2) return null;
+        const points = stroke.points;
 
-        const pathData = outline.reduce((acc, point, i) => {
-            if (i === 0) {
-                return `M ${point[0].toFixed(2)} ${point[1].toFixed(2)}`;
-            }
-            return `${acc} L ${point[0].toFixed(2)} ${point[1].toFixed(2)}`;
-        }, '') + ' Z';
+        // Build smooth path using quadratic bezier curves
+        let pathData = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+
+        for (let i = 1; i < points.length - 1; i++) {
+            const current = points[i];
+            const next = points[i + 1];
+            // Midpoint as control point for smooth curve
+            const midX = (current.x + next.x) / 2;
+            const midY = (current.y + next.y) / 2;
+            pathData += ` Q ${current.x.toFixed(1)} ${current.y.toFixed(1)} ${midX.toFixed(1)} ${midY.toFixed(1)}`;
+        }
+
+        // End with last point
+        if (points.length > 1) {
+            const last = points[points.length - 1];
+            pathData += ` L ${last.x.toFixed(1)} ${last.y.toFixed(1)}`;
+        }
 
         return (
             <path
                 d={pathData}
-                fill={stroke.color}
-                strokeLinejoin="round"
+                fill="none"
+                stroke={stroke.color}
+                strokeWidth={stroke.size}
                 strokeLinecap="round"
+                strokeLinejoin="round"
             />
         );
     };
@@ -288,6 +296,19 @@ export const Whiteboard: React.FC = () => {
                         ))}
                         {currentStroke && (
                             <g>{renderStroke(currentStroke)}</g>
+                        )}
+                        {/* Eraser cursor circle */}
+                        {tool === 'eraser' && cursorPos && (
+                            <circle
+                                cx={cursorPos.x}
+                                cy={cursorPos.y}
+                                r={25}
+                                fill="none"
+                                stroke="#666"
+                                strokeWidth={2}
+                                strokeDasharray="4 2"
+                                pointerEvents="none"
+                            />
                         )}
                     </svg>
                 </div>

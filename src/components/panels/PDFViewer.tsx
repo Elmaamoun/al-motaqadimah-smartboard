@@ -34,7 +34,7 @@ const PDFViewerContent: React.FC<PDFViewerContentProps> = React.memo(({
     const [pageNumber, setPageNumber] = useState<number>(1);
     const [scale, setScale] = useState<number>(1.55); // Default to 155% as requested
     const [pageInput, setPageInput] = useState<string>('1');
-    const [isAutoFitEnabled, setIsAutoFitEnabled] = useState<boolean>(false); // Smart auto-fit
+    const [isAutoFitEnabled, setIsAutoFitEnabled] = useState<boolean>(true); // Auto-fit enabled by default
 
     // Drag State
     const [isDragging, setIsDragging] = useState(false);
@@ -45,6 +45,7 @@ const PDFViewerContent: React.FC<PDFViewerContentProps> = React.memo(({
     const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
     const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
     const [color, setColor] = useState('#EF4444'); // Default red for corrections
+    const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
@@ -107,7 +108,8 @@ const PDFViewerContent: React.FC<PDFViewerContentProps> = React.memo(({
         const resizeObserver = new ResizeObserver(() => {
             if (isAutoFitEnabled && containerRef.current) {
                 const containerWidth = containerRef.current.clientWidth;
-                setScale((containerWidth - 40) / 800);
+                // Increased zoom by 10% (divided by 720 instead of 800)
+                setScale((containerWidth - 40) / 720);
             }
         });
 
@@ -178,15 +180,25 @@ const PDFViewerContent: React.FC<PDFViewerContentProps> = React.memo(({
     };
 
     const handlePointerMove = (e: React.PointerEvent) => {
-        if (!isAnnotationMode || !currentStroke) return;
+        if (!isAnnotationMode) return;
         const point = getSvgPoint(e);
+
+        // Always update cursor position for eraser circle
+        setCursorPos({ x: point.x, y: point.y });
+
+        if (!currentStroke) return;
         const newPoints = [...currentStroke.points, point];
         setCurrentStroke({ ...currentStroke, points: newPoints });
 
         if (tool === 'eraser') {
             const pageStrokes = annotations[pageNumber] || [];
+            // Only erase strokes where cursor directly touches a point (smaller radius = 10)
             const remainingStrokes = pageStrokes.filter(stroke => {
-                return !stroke.points.some(p => Math.hypot(p.x - point.x, p.y - point.y) < 20);
+                // Check if any point in the stroke is within eraser radius
+                const isTouched = stroke.points.some(p =>
+                    Math.hypot(p.x - point.x, p.y - point.y) < 10
+                );
+                return !isTouched;
             });
 
             if (remainingStrokes.length !== pageStrokes.length) {
@@ -221,32 +233,35 @@ const PDFViewerContent: React.FC<PDFViewerContentProps> = React.memo(({
     };
 
     const renderStroke = (stroke: Stroke) => {
-        const outline = getStroke(stroke.points, {
-            size: stroke.size,
-            thinning: 0.3,
-            smoothing: 0.8,
-            streamline: 0.7,
-            easing: (t) => t,
-            start: { taper: 0, cap: true },
-            end: { taper: 0, cap: true },
-        });
+        if (stroke.points.length < 2) return null;
 
-        if (outline.length < 2) return null;
+        const points = stroke.points;
 
-        const pathData = outline.reduce((acc, point, i) => {
-            if (i === 0) {
-                return `M ${point[0].toFixed(2)} ${point[1].toFixed(2)}`;
-            }
-            return `${acc} L ${point[0].toFixed(2)} ${point[1].toFixed(2)}`;
-        }, '') + ' Z';
+        // Build smooth path using quadratic bezier curves
+        let pathData = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+
+        for (let i = 1; i < points.length - 1; i++) {
+            const current = points[i];
+            const next = points[i + 1];
+            const midX = (current.x + next.x) / 2;
+            const midY = (current.y + next.y) / 2;
+            pathData += ` Q ${current.x.toFixed(1)} ${current.y.toFixed(1)} ${midX.toFixed(1)} ${midY.toFixed(1)}`;
+        }
+
+        if (points.length > 1) {
+            const last = points[points.length - 1];
+            pathData += ` L ${last.x.toFixed(1)} ${last.y.toFixed(1)}`;
+        }
 
         return (
             <path
                 d={pathData}
-                fill={stroke.color}
-                fillOpacity={0.8}
-                strokeLinejoin="round"
+                fill="none"
+                stroke={stroke.color}
+                strokeWidth={stroke.size}
                 strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity={0.8}
             />
         );
     };
@@ -471,6 +486,19 @@ const PDFViewerContent: React.FC<PDFViewerContentProps> = React.memo(({
                                     ))}
                                     {currentStroke && !currentStroke.isEraser && (
                                         <g>{renderStroke(currentStroke)}</g>
+                                    )}
+                                    {/* Eraser cursor circle */}
+                                    {tool === 'eraser' && cursorPos && isAnnotationMode && (
+                                        <circle
+                                            cx={cursorPos.x}
+                                            cy={cursorPos.y}
+                                            r={20}
+                                            fill="none"
+                                            stroke="#666"
+                                            strokeWidth={2}
+                                            strokeDasharray="4 2"
+                                            pointerEvents="none"
+                                        />
                                     )}
                                 </svg>
                             </div>
