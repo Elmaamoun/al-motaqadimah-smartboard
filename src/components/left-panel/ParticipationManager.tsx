@@ -83,56 +83,58 @@ export const ParticipationManager: React.FC = () => {
             const startTime = ctx.currentTime;
 
             if (type === 'positive') {
-                // Clapping sound effect - multiple short bursts
-                for (let i = 0; i < 5; i++) {
-                    const bufferSize = 4096;
-                    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-                    const output = buffer.getChannelData(0);
+                // Celebration chime - bright ascending tones
+                const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // C5, E5, G5, C6, E6
 
-                    // White noise burst for clap sound
-                    for (let j = 0; j < bufferSize; j++) {
-                        output[j] = (Math.random() * 2 - 1) * Math.pow(1 - j / bufferSize, 3);
-                    }
-
-                    const source = ctx.createBufferSource();
-                    source.buffer = buffer;
-
-                    const gain = ctx.createGain();
-                    const filter = ctx.createBiquadFilter();
-
-                    filter.type = 'highpass';
-                    filter.frequency.value = 1000;
-
-                    gain.gain.setValueAtTime(0.3, startTime + i * 0.15);
-                    gain.gain.exponentialRampToValueAtTime(0.01, startTime + i * 0.15 + 0.1);
-
-                    source.connect(filter);
-                    filter.connect(gain);
-                    gain.connect(ctx.destination);
-
-                    source.start(startTime + i * 0.15);
-                    source.stop(startTime + i * 0.15 + 0.15);
-                }
-            } else {
-                // Negative: Low Dissonance
-                const frequencies = [150, 110];
-                frequencies.forEach((freq) => {
+                notes.forEach((freq, i) => {
                     const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
 
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(freq, startTime);
-                    osc.frequency.exponentialRampToValueAtTime(freq * 0.5, startTime + 0.4);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, startTime + i * 0.1);
 
-                    gain.gain.setValueAtTime(0.2, startTime);
-                    gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.4);
+                    gain.gain.setValueAtTime(0, startTime + i * 0.1);
+                    gain.gain.linearRampToValueAtTime(0.25, startTime + i * 0.1 + 0.03);
+                    gain.gain.exponentialRampToValueAtTime(0.001, startTime + i * 0.1 + 0.5);
 
                     osc.connect(gain);
                     gain.connect(ctx.destination);
 
-                    osc.start(startTime);
-                    osc.stop(startTime + 0.4);
+                    osc.start(startTime + i * 0.1);
+                    osc.stop(startTime + i * 0.1 + 0.6);
                 });
+
+                // Add sparkle effect
+                for (let i = 0; i < 3; i++) {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(2000 + i * 500, startTime + 0.4 + i * 0.05);
+                    gain.gain.setValueAtTime(0.1, startTime + 0.4 + i * 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.4 + i * 0.05 + 0.15);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(startTime + 0.4 + i * 0.05);
+                    osc.stop(startTime + 0.4 + i * 0.05 + 0.2);
+                }
+            } else {
+                // Gentle warning tone - soft descending
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, startTime);
+                osc.frequency.linearRampToValueAtTime(300, startTime + 0.3);
+
+                gain.gain.setValueAtTime(0.15, startTime);
+                gain.gain.linearRampToValueAtTime(0.1, startTime + 0.15);
+                gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.35);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start(startTime);
+                osc.stop(startTime + 0.4);
             }
         } catch (e) {
             console.error("Audio play failed", e);

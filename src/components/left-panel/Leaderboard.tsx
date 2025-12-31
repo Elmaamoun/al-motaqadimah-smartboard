@@ -91,14 +91,16 @@ export const Leaderboard: React.FC = () => {
                     >
                         <X size={28} />
                     </button>
-
-                    <div className="text-center text-white p-4 w-full max-w-4xl will-change-transform">
-                        {/* Main Title */}
-                        <h1 className="text-5xl font-black mb-2 text-yellow-300 drop-shadow-lg text-center">
+                    {/* Title at very top */}
+                    <div className="absolute top-8 left-0 right-0 text-center">
+                        <h1 className="text-6xl font-black text-yellow-300 drop-shadow-lg">
                             أحسنتم! 🎉
                         </h1>
-                        <p className="text-xl mb-6 text-white/90 text-center">مبروك للمتميزين</p>
+                        <p className="text-2xl mt-2 text-white/90">مبروك للمتميزين</p>
+                    </div>
 
+                    {/* Cards in center */}
+                    <div className="text-center text-white p-4 w-full max-w-4xl will-change-transform mt-20">
                         {/* Cards Container */}
                         <div className="flex flex-row gap-6 justify-center items-stretch">
                             {/* Top Students */}
