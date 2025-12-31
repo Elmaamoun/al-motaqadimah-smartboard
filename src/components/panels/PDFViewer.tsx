@@ -48,6 +48,7 @@ const PDFViewerContent: React.FC<PDFViewerContentProps> = React.memo(({
 
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
+    const lastPinchDistance = useRef<number | null>(null); // For pinch-to-zoom
 
     const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;
@@ -95,7 +96,7 @@ const PDFViewerContent: React.FC<PDFViewerContentProps> = React.memo(({
             // Assume A4 approx 800px width at 100% or just fit available space
             // Defaulting to a safe calculation where 1.0 = full width of typical document
             // If container is 800px, scale 1.0. If 400px, scale 0.5.
-            setScale((containerWidth - 40) / 800);
+            setScale((containerWidth - 40) / 760);
             setIsAutoFitEnabled(true); // Enable auto-fit on Fit Width click
         }
     };
@@ -107,8 +108,8 @@ const PDFViewerContent: React.FC<PDFViewerContentProps> = React.memo(({
         const resizeObserver = new ResizeObserver(() => {
             if (isAutoFitEnabled && containerRef.current) {
                 const containerWidth = containerRef.current.clientWidth;
-                // Increased zoom by 10% (divided by 720 instead of 800)
-                setScale((containerWidth - 40) / 720);
+                // Increased zoom by 15% (divided by 680 instead of 800)
+                setScale((containerWidth - 40) / 680);
             }
         });
 
@@ -141,6 +142,44 @@ const PDFViewerContent: React.FC<PDFViewerContentProps> = React.memo(({
         setIsDragging(false);
     };
 
+    // --- Pinch-to-Zoom Touch Handlers ---
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (e.touches.length === 2) {
+            // Two fingers - start pinch tracking
+            const distance = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            lastPinchDistance.current = distance;
+            setIsAutoFitEnabled(false); // Disable auto-fit when manually zooming
+        }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (e.touches.length === 2 && lastPinchDistance.current !== null) {
+            // Two fingers moving - calculate zoom
+            const distance = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+
+            const delta = distance - lastPinchDistance.current;
+            const zoomSpeed = 0.005; // Adjust sensitivity
+
+            setScale(prevScale => {
+                const newScale = prevScale + delta * zoomSpeed;
+                // Clamp scale between 0.5 and 3.0
+                return Math.max(0.5, Math.min(3.0, newScale));
+            });
+
+            lastPinchDistance.current = distance;
+        }
+    };
+
+    const handleTouchEnd = () => {
+        lastPinchDistance.current = null;
+    };
+
     // --- Annotation Logic ---
 
     const getSvgPoint = (e: React.PointerEvent): Point => {
@@ -162,10 +201,12 @@ const PDFViewerContent: React.FC<PDFViewerContentProps> = React.memo(({
         const point = getSvgPoint(e);
 
         if (tool === 'eraser') {
+            // Start erasing - erase points under cursor
+            eraseAtPoint(point);
             setCurrentStroke({
                 points: [point],
                 color: 'transparent',
-                size: 20,
+                size: 25,
                 isEraser: true,
             });
         } else {
@@ -178,6 +219,56 @@ const PDFViewerContent: React.FC<PDFViewerContentProps> = React.memo(({
         }
     };
 
+    // Erase function - removes points within eraserRadius
+    const eraseAtPoint = (point: { x: number; y: number }) => {
+        const pageStrokes = annotations[pageNumber] || [];
+        const eraserRadius = 25; // Match the visual cursor size
+
+        const newStrokes: typeof pageStrokes = [];
+        let erasedAny = false;
+
+        pageStrokes.forEach(stroke => {
+            // Skip eraser strokes
+            if (stroke.isEraser) {
+                newStrokes.push(stroke);
+                return;
+            }
+
+            let currentSegment: typeof stroke.points = [];
+
+            stroke.points.forEach(p => {
+                const distance = Math.hypot(p.x - point.x, p.y - point.y);
+
+                if (distance >= eraserRadius) {
+                    currentSegment.push(p);
+                } else {
+                    erasedAny = true;
+                    if (currentSegment.length >= 2) {
+                        newStrokes.push({
+                            ...stroke,
+                            points: [...currentSegment]
+                        });
+                    }
+                    currentSegment = [];
+                }
+            });
+
+            if (currentSegment.length >= 2) {
+                newStrokes.push({
+                    ...stroke,
+                    points: [...currentSegment]
+                });
+            }
+        });
+
+        if (erasedAny) {
+            setAnnotations({
+                ...annotations,
+                [pageNumber]: newStrokes,
+            });
+        }
+    };
+
     const handlePointerMove = (e: React.PointerEvent) => {
         if (!isAnnotationMode) return;
         const point = getSvgPoint(e);
@@ -186,33 +277,29 @@ const PDFViewerContent: React.FC<PDFViewerContentProps> = React.memo(({
         setCursorPos({ x: point.x, y: point.y });
 
         if (!currentStroke) return;
-        const newPoints = [...currentStroke.points, point];
-        setCurrentStroke({ ...currentStroke, points: newPoints });
 
-        if (tool === 'eraser') {
-            const pageStrokes = annotations[pageNumber] || [];
-            // Only erase strokes where cursor directly touches a point (smaller radius = 10)
-            const remainingStrokes = pageStrokes.filter(stroke => {
-                // Check if any point in the stroke is within eraser radius
-                const isTouched = stroke.points.some(p =>
-                    Math.hypot(p.x - point.x, p.y - point.y) < 10
-                );
-                return !isTouched;
+        // If eraser is active (pointer down), erase while moving
+        if (currentStroke.isEraser) {
+            eraseAtPoint(point);
+            setCurrentStroke({
+                ...currentStroke,
+                points: [...currentStroke.points, point],
             });
-
-            if (remainingStrokes.length !== pageStrokes.length) {
-                setAnnotations({
-                    ...annotations,
-                    [pageNumber]: remainingStrokes,
-                });
-            }
+            return;
         }
+
+        // Normal pen drawing
+        setCurrentStroke({
+            ...currentStroke,
+            points: [...currentStroke.points, point],
+        });
     };
 
     const handlePointerUp = () => {
         if (!isAnnotationMode || !currentStroke) return;
 
-        if (tool !== 'eraser') {
+        // Only save pen strokes, not eraser strokes
+        if (!currentStroke.isEraser) {
             const pageStrokes = annotations[pageNumber] || [];
             setAnnotations({
                 ...annotations,
@@ -423,6 +510,9 @@ const PDFViewerContent: React.FC<PDFViewerContentProps> = React.memo(({
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
             >
                 {!pdfFile ? (
                     <div className="flex flex-col items-center justify-center text-gray-400 m-auto">
@@ -472,7 +562,7 @@ const PDFViewerContent: React.FC<PDFViewerContentProps> = React.memo(({
                                 <svg
                                     ref={svgRef}
                                     className="absolute inset-0 w-full h-full touch-none z-10 pointer-events-auto cursor-none"
-                                    style={{ pointerEvents: isAnnotationMode ? 'auto' : 'none', top: 32, left: 32, right: 32, bottom: 32 }}
+                                    style={{ pointerEvents: isAnnotationMode ? 'auto' : 'none' }}
                                     onPointerDown={handlePointerDown}
                                     onPointerMove={handlePointerMove}
                                     onPointerUp={handlePointerUp}
@@ -483,15 +573,15 @@ const PDFViewerContent: React.FC<PDFViewerContentProps> = React.memo(({
                                     {(annotations[pageNumber] || []).map((stroke, i) => (
                                         <g key={i}>{renderStroke(stroke)}</g>
                                     ))}
-                                    {currentStroke && !currentStroke.isEraser && (
+                                    {currentStroke && (
                                         <g>{renderStroke(currentStroke)}</g>
                                     )}
-                                    {/* Eraser cursor circle */}
+                                    {/* Eraser cursor circle - same as Whiteboard */}
                                     {tool === 'eraser' && cursorPos && isAnnotationMode && (
                                         <circle
                                             cx={cursorPos.x}
                                             cy={cursorPos.y}
-                                            r={20}
+                                            r={25}
                                             fill="none"
                                             stroke="#666"
                                             strokeWidth={2}

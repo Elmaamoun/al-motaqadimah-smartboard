@@ -92,11 +92,11 @@ export const Leaderboard: React.FC = () => {
                         <X size={28} />
                     </button>
                     {/* Title at very top */}
-                    <div className="absolute top-20 left-0 right-0 text-center">
-                        <h1 className="text-6xl font-black text-yellow-300 drop-shadow-lg">
-                            &nbsp;&nbsp;أحسنتم! 🎉
+                    <div className="absolute top-28 left-0 right-0 text-center">
+                        <h1 className="text-7xl font-black text-yellow-300 drop-shadow-lg mb-3">
+                            أحسنتم!
                         </h1>
-                        <p className="text-2xl mt-2 text-white/90">مبروك للمتميزين</p>
+                        <p className="text-3xl font-bold text-white/95">مبروك للمتميزين</p>
                     </div>
 
                     {/* Cards in center */}

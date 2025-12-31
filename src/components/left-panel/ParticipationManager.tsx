@@ -318,7 +318,7 @@ export const ParticipationManager: React.FC = () => {
 
                                         {/* Actions - Hidden when locked - MOVED TO LEFT (End) */}
                                         {!isEditLocked && (
-                                            <div className="flex bg-gray-50 rounded-lg p-0.5 opacity-0 group-hover:opacity-100 transition-opacity mr-auto">
+                                            <div className="flex bg-gray-50 rounded-lg p-0.5 mr-auto">
                                                 <button
                                                     onClick={() => {
                                                         setEditingId(student.id);
@@ -330,11 +330,7 @@ export const ParticipationManager: React.FC = () => {
                                                     <Edit2 size={16} />
                                                 </button>
                                                 <button
-                                                    onClick={() => {
-                                                        if (window.confirm(`هل تريد حذف الطالب ${student.name} من هذا الفصل؟`)) {
-                                                            deleteStudent(student.id);
-                                                        }
-                                                    }}
+                                                    onClick={() => deleteStudent(student.id)}
                                                     className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-white rounded-md transition-all"
                                                     title="حذف الطالب"
                                                 >
@@ -421,19 +417,38 @@ export const ParticipationManager: React.FC = () => {
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2 flex-1 min-w-0">
                                                 <input
+                                                    id={`group-name-${group.id}`}
                                                     type="text"
                                                     value={group.name}
                                                     onChange={(e) => updateGroupName(group.id, e.target.value)}
-                                                    className="font-bold text-gray-800 text-xl bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary-blue focus:outline-none w-full transition-colors truncate"
+                                                    disabled={isEditLocked}
+                                                    className={clsx(
+                                                        "font-bold text-gray-800 text-xl bg-transparent border-b border-transparent focus:outline-none w-full transition-colors truncate",
+                                                        isEditLocked ? "cursor-default" : "hover:border-gray-300 focus:border-primary-blue"
+                                                    )}
                                                     placeholder="اسم المجموعة"
                                                 />
-                                                {!isEditLocked && <Edit2 size={14} className="text-gray-400 opacity-50 flex-shrink-0" />}
+                                                {!isEditLocked && (
+                                                    <button
+                                                        onClick={() => {
+                                                            const input = document.getElementById(`group-name-${group.id}`) as HTMLInputElement;
+                                                            if (input) {
+                                                                input.focus();
+                                                                input.select();
+                                                            }
+                                                        }}
+                                                        className="p-1 text-gray-400 hover:text-primary-blue hover:bg-blue-50 rounded transition-all"
+                                                        title="تعديل اسم المجموعة"
+                                                    >
+                                                        <Edit2 size={14} />
+                                                    </button>
+                                                )}
                                             </div>
 
                                             {!isEditLocked && (
                                                 <button
                                                     onClick={() => deleteGroup(group.id)}
-                                                    className="text-gray-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-all opacity-50 hover:opacity-100"
+                                                    className="text-gray-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-all"
                                                     title="حذف المجموعة"
                                                 >
                                                     <Trash2 size={18} />

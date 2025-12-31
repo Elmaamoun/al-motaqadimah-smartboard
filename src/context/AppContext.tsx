@@ -208,6 +208,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (savedSetup) {
             try {
                 const parsed = JSON.parse(savedSetup);
+                // Always default to keyboard mode ('text'), not pen
+                parsed.unitMode = 'text';
+                parsed.lessonTitleMode = 'text';
                 setLessonSetup(parsed);
             } catch (e) {
                 console.error('Failed to parse saved lesson setup', e);
