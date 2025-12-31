@@ -92,9 +92,9 @@ export const Leaderboard: React.FC = () => {
                         <X size={28} />
                     </button>
                     {/* Title at very top */}
-                    <div className="absolute top-8 left-0 right-0 text-center">
+                    <div className="absolute top-20 left-0 right-0 text-center">
                         <h1 className="text-6xl font-black text-yellow-300 drop-shadow-lg">
-                            أحسنتم! 🎉
+                            &nbsp;&nbsp;أحسنتم! 🎉
                         </h1>
                         <p className="text-2xl mt-2 text-white/90">مبروك للمتميزين</p>
                     </div>
