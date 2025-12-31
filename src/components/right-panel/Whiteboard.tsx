@@ -24,7 +24,7 @@ export const Whiteboard: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(0);
     const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
     const [color, setColor] = useState('#000000');
-    const [size] = useState(4); // Standard pen thickness
+    const [size] = useState(2); // Thinner pen
     const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
     const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
 

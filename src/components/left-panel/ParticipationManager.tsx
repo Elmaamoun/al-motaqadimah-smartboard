@@ -83,27 +83,36 @@ export const ParticipationManager: React.FC = () => {
             const startTime = ctx.currentTime;
 
             if (type === 'positive') {
-                // Celebration Chord: C5, E5, G5, C6 (Arpeggiated)
-                const frequencies = [523.25, 659.25, 783.99, 1046.50];
+                // Clapping sound effect - multiple short bursts
+                for (let i = 0; i < 5; i++) {
+                    const bufferSize = 4096;
+                    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                    const output = buffer.getChannelData(0);
 
-                frequencies.forEach((freq, index) => {
-                    const osc = ctx.createOscillator();
+                    // White noise burst for clap sound
+                    for (let j = 0; j < bufferSize; j++) {
+                        output[j] = (Math.random() * 2 - 1) * Math.pow(1 - j / bufferSize, 3);
+                    }
+
+                    const source = ctx.createBufferSource();
+                    source.buffer = buffer;
+
                     const gain = ctx.createGain();
+                    const filter = ctx.createBiquadFilter();
 
-                    osc.type = 'triangle'; // Smoother than sine for chords
-                    osc.frequency.setValueAtTime(freq, startTime + (index * 0.08)); // Slight stagger
+                    filter.type = 'highpass';
+                    filter.frequency.value = 1000;
 
-                    // Envelope
-                    gain.gain.setValueAtTime(0, startTime + (index * 0.08));
-                    gain.gain.linearRampToValueAtTime(0.15, startTime + (index * 0.08) + 0.05); // Attack
-                    gain.gain.exponentialRampToValueAtTime(0.001, startTime + (index * 0.08) + 1.2); // Long Decay
+                    gain.gain.setValueAtTime(0.3, startTime + i * 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.01, startTime + i * 0.15 + 0.1);
 
-                    osc.connect(gain);
+                    source.connect(filter);
+                    filter.connect(gain);
                     gain.connect(ctx.destination);
 
-                    osc.start(startTime + (index * 0.08));
-                    osc.stop(startTime + (index * 0.08) + 1.2);
-                });
+                    source.start(startTime + i * 0.15);
+                    source.stop(startTime + i * 0.15 + 0.15);
+                }
             } else {
                 // Negative: Low Dissonance
                 const frequencies = [150, 110];

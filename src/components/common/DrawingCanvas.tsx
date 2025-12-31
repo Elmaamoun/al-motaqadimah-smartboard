@@ -39,7 +39,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     const [strokes, setStrokes] = useState<Stroke[]>([]);
     const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
     const [color, setColor] = useState('#000000');
-    const [size] = useState(4);
+    const [size] = useState(2); // Thinner pen
     const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
     const isLoaded = useRef(false);
 

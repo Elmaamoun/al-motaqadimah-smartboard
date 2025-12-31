@@ -94,10 +94,10 @@ export const Leaderboard: React.FC = () => {
 
                     <div className="text-center text-white p-4 w-full max-w-4xl will-change-transform">
                         {/* Main Title */}
-                        <h1 className="text-5xl font-black mb-2 text-white drop-shadow-lg">
+                        <h1 className="text-5xl font-black mb-2 text-yellow-300 drop-shadow-lg text-center">
                             أحسنتم! 🎉
                         </h1>
-                        <p className="text-xl mb-6 text-white/90">مبروك للمتميزين</p>
+                        <p className="text-xl mb-6 text-white/90 text-center">مبروك للمتميزين</p>
 
                         {/* Cards Container */}
                         <div className="flex flex-row gap-6 justify-center items-stretch">
