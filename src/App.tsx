@@ -1,6 +1,7 @@
 import React from 'react';
 import { MainLayout } from './components/layout/MainLayout';
 import { SetupScreen } from './components/screens/SetupScreen';
+import { AppGate } from './components/screens/AppGate';
 import { AppProvider, useApp } from './context/AppContext';
 import './index.css';
 
@@ -19,9 +20,11 @@ const AppContent: React.FC = () => {
 function App() {
   return (
     <AppProvider>
-      <div className="app-scale-wrapper">
-        <AppContent />
-      </div>
+      <AppGate>
+        <div className="app-scale-wrapper">
+          <AppContent />
+        </div>
+      </AppGate>
     </AppProvider>
   );
 }

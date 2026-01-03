@@ -24,7 +24,7 @@ export const Whiteboard: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(0);
     const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
     const [color, setColor] = useState('#000000');
-    const [size] = useState(2); // Thinner pen
+    const [size] = useState(4); // Bigger pen for better visibility
     const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
     const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
 
@@ -75,6 +75,14 @@ export const Whiteboard: React.FC = () => {
         setCursorPos({ x: point.x, y: point.y });
 
         if (!currentStroke) return;
+
+        // Point smoothing - skip points that are too close for smoother lines
+        const lastPoint = currentStroke.points[currentStroke.points.length - 1];
+        const distance = Math.hypot(point.x - lastPoint.x, point.y - lastPoint.y);
+
+        // Only add point if it's at least 3 pixels away (reduces jitter)
+        if (distance < 3) return;
+
         setCurrentStroke({
             ...currentStroke,
             points: [...currentStroke.points, point],
