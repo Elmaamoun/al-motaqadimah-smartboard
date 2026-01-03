@@ -1,59 +1,85 @@
-import React, { useEffect, useState, type ReactNode } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import React, { useEffect, useState, useCallback, type ReactNode } from 'react';
+import { checkExpiry, fetchRemotePolicy, LockReason, type ExpiryCheckResult } from '../../security/expiryGuard';
+import { LockScreen } from './LockScreen';
 
 interface AppGateProps {
     children: ReactNode;
 }
 
-interface RemoteConfig {
-    enabled: boolean;
-    message: string;
-    minVersion?: string;
-}
-
-// Remote config URL - hosted on Vercel with the app
-// Change enabled to false in this file to disable the app remotely
-const CONFIG_URL = '/api/config.json';
-
 export const AppGate: React.FC<AppGateProps> = ({ children }) => {
     const [isLoading, setIsLoading] = useState(true);
-    const [isEnabled, setIsEnabled] = useState(true);
-    const [disabledMessage, setDisabledMessage] = useState('');
+    const [isLocked, setIsLocked] = useState(false);
+    const [lockReason, setLockReason] = useState<LockReason>(LockReason.NONE);
 
-    const checkAppStatus = async () => {
-        setIsLoading(true);
+    // Main check function
+    const performCheck = useCallback(async (fetchRemote: boolean = false) => {
+        let result: ExpiryCheckResult;
 
-        try {
-            const response = await fetch(CONFIG_URL, {
-                cache: 'no-store',
-                headers: { 'Cache-Control': 'no-cache' }
-            });
-
-            if (!response.ok) {
-                // If config not found, allow app to work (fail-open)
-                setIsEnabled(true);
-                setIsLoading(false);
-                return;
-            }
-
-            const config: RemoteConfig = await response.json();
-            setIsEnabled(config.enabled);
-            setDisabledMessage(config.message || 'التطبيق غير متاح حالياً');
-        } catch (err) {
-            // On network error, allow app to work (fail-open for offline use)
-            console.log('Config check failed, allowing app access');
-            setIsEnabled(true);
-        } finally {
-            setIsLoading(false);
+        if (fetchRemote && navigator.onLine) {
+            // Try to fetch remote policy first
+            result = await fetchRemotePolicy();
+        } else {
+            // Just check local expiry
+            result = checkExpiry();
         }
-    };
 
+        setIsLocked(result.isLocked);
+        setLockReason(result.reason);
+        setIsLoading(false);
+    }, []);
+
+    // Initial check on mount
     useEffect(() => {
-        checkAppStatus();
+        performCheck(true); // Try to fetch remote on initial load
+    }, [performCheck]);
 
-        // Re-check every 5 minutes while app is open
-        const interval = setInterval(checkAppStatus, 5 * 60 * 1000);
+    // Check on visibility change (when app comes back to foreground)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                performCheck(false); // Local check only on resume
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [performCheck]);
+
+    // Check on focus (additional safety)
+    useEffect(() => {
+        const handleFocus = () => {
+            performCheck(false);
+        };
+
+        window.addEventListener('focus', handleFocus);
+        return () => window.removeEventListener('focus', handleFocus);
+    }, [performCheck]);
+
+    // Periodic online check (every 5 minutes)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (navigator.onLine) {
+                performCheck(true);
+            }
+        }, 5 * 60 * 1000);
+
         return () => clearInterval(interval);
+    }, [performCheck]);
+
+    // Handle online event to refresh policy
+    useEffect(() => {
+        const handleOnline = () => {
+            performCheck(true);
+        };
+
+        window.addEventListener('online', handleOnline);
+        return () => window.removeEventListener('online', handleOnline);
+    }, [performCheck]);
+
+    // Handle unlock from LockScreen
+    const handleUnlock = useCallback(() => {
+        setIsLocked(false);
+        setLockReason(LockReason.NONE);
     }, []);
 
     // Loading screen
@@ -66,29 +92,9 @@ export const AppGate: React.FC<AppGateProps> = ({ children }) => {
         );
     }
 
-    // Disabled screen (Kill Switch active)
-    if (!isEnabled) {
-        return (
-            <div className="h-screen w-screen bg-gradient-to-br from-gray-800 to-gray-900 flex flex-col items-center justify-center text-white p-8">
-                <div className="bg-white/10 rounded-3xl p-10 backdrop-blur-sm max-w-md text-center">
-                    <div className="bg-red-500/20 rounded-full p-4 w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-                        <AlertTriangle size={48} className="text-red-400" />
-                    </div>
-                    <h1 className="text-3xl font-bold mb-4">التطبيق غير متاح</h1>
-                    <p className="text-lg text-gray-300 mb-8 leading-relaxed">
-                        {disabledMessage}
-                    </p>
-                    <button
-                        onClick={checkAppStatus}
-                        className="bg-white/20 hover:bg-white/30 px-6 py-3 rounded-xl font-bold flex items-center gap-2 mx-auto transition-all"
-                    >
-                        <RefreshCw size={20} />
-                        إعادة المحاولة
-                    </button>
-                </div>
-                <p className="text-gray-500 text-sm mt-8">مدارس المتقدمة - السبورة الذكية</p>
-            </div>
-        );
+    // Lock screen
+    if (isLocked) {
+        return <LockScreen reason={lockReason} onUnlock={handleUnlock} />;
     }
 
     // App is enabled - render children
